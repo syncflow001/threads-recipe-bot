@@ -1,0 +1,12 @@
+{
+  "name": "threads-recipe-bot",
+  "version": "1.0.0",
+  "description": "스레드에서 바이럴 중인 요리 글을 모아 내 말투로 다시 쓰고 내 계정에 올린다",
+  "type": "module",
+  "license": "MIT",
+  "engines": { "node": ">=24" },
+  "scripts": {
+    "설정": "node 설정.mjs",
+    "test": "node test.mjs"
+  }
+}

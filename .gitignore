@@ -1,0 +1,12 @@
+.DS_Store
+
+# 열쇠가 들어 있다. 절대 커밋하지 않는다
+.env
+.env.*
+!.env.example
+
+# 내려받은 스레드 미디어 — 남의 저작물이다
+media/
+
+# 설정 도우미가 남기는 이전 말투 파일
+persona.json.backup
