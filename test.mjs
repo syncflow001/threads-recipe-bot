@@ -180,9 +180,9 @@ const 가짜LLM = (내용, ok = true) => async () => ({
 
 const r = await 재구성(원글, { 페르소나, 키: 'k', fetch: 가짜LLM('{"본문":" 새 본문 ","레시피":" 새 레시피 "}') })
 assert.deepEqual(r.본문, '새 본문'); assert.deepEqual(r.레시피, '새 레시피')
-assert.equal(r.추천검색어, '', '추천검색어가 없으면 빈 문자열이다 (링크를 안 붙인다)')
-const 검색어결과 = await 재구성(원글, { 페르소나, 키: 'k', fetch: 가짜LLM('{"본문":"a","레시피":"b","추천검색어":" 국산콩 두부 "}') })
-assert.equal(검색어결과.추천검색어, '국산콩 두부')
+assert.equal(r.핵심재료, '', '핵심재료가 없으면 빈 문자열이다 (링크를 안 붙인다)')
+const 검색어결과 = await 재구성(원글, { 페르소나, 키: 'k', fetch: 가짜LLM('{"본문":"a","레시피":"b","핵심재료":" 국산콩 두부 "}') })
+assert.equal(검색어결과.핵심재료, '국산콩 두부')
 
 // 꼬리표 — 문자를 넓히면 남이 수수료를 가로챌 수 있다
 import { 꼬리표, SUBID_최대길이 } from './src/coupang.mjs'
@@ -271,7 +271,34 @@ const 링크조각 = 나뉜것.filter((c) => c.includes('link.coupang.com'))
 assert.equal(링크조각.length, 1)
 assert.ok(링크조각[0].includes(대가성문구), '링크가 실린 조각에는 반드시 문구가 함께 있다')
 
-console.log('통과 — 재구성 검사 16개')
+// 링크는 준비물 문단 끝에 들어간다. 재료를 읽는 그 자리에서 사러 갈 수 있어야 한다
+const 레시피본 = `🍞 **식빵 프렌치토스트**
+
+🛒 준비물
+식빵 4장
+계란 2알
+
+👩🏻‍🍳 만드는 법
+
+1️⃣ 계란을 푼다
+
+바삭하게 굽는 게 포인트야`
+const 끼운것 = 링크넣기(레시피본, [{ 이름: '식빵', url: 'https://link.coupang.com/a' }])
+assert.ok(끼운것.indexOf('계란 2알') < 끼운것.indexOf(대가성문구), '링크는 준비물 뒤에 온다')
+assert.ok(끼운것.indexOf(대가성문구) < 끼운것.indexOf('만드는 법'), '링크는 만드는 법 앞에 온다')
+
+// 나뉘었을 때 링크가 준비물 조각에 남아 있어야 자리를 옮긴 보람이 있다
+const 끼운조각 = 나누기(끼운것)
+const 준비물조각 = 끼운조각.find((c) => c.includes('준비물'))
+assert.ok(준비물조각.includes('link.coupang.com'), '링크가 준비물 조각에 함께 실린다')
+assert.ok(준비물조각.includes(대가성문구), '준비물 조각에 문구도 함께 있다')
+assert.ok(!끼운조각.find((c) => c.includes('만드는 법')).includes('link.coupang.com'),
+  '만드는 법 조각에는 링크가 없다')
+
+// 만드는 법을 못 찾으면 링크를 버리지 않고 맨 뒤에 붙인다
+assert.ok(링크넣기('그냥 한 문단', [{ 이름: '식빵', url: 'https://x/a' }]).endsWith('식빵 https://x/a'))
+
+console.log('통과 — 재구성 검사 21개')
 
 
 // --- 발행 ---
