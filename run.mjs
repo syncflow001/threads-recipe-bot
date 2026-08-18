@@ -2,7 +2,7 @@
 // 조회수까지 보려면 로그인 쿠키가 필요하다.  THREADS_COOKIE="..." node run.mjs 레시피
 import { 검색, 상세채우기 } from './src/threads.mjs'
 import { 줄세우기 } from './src/score.mjs'
-import { 내려받기, 안쓴것만 } from './src/media.mjs'
+import { 내려받기, 안쓴것만, 썼다표시 } from './src/media.mjs'
 import { 재구성, 레시피있나, 링크넣기 } from './src/compose.mjs'
 import { 레시피링크 } from './src/coupang.mjs'
 import { 글올리기 } from './src/publish.mjs'
@@ -16,6 +16,7 @@ const 키워드들 = process.argv.slice(2).filter((a) => !a.startsWith('--'))
 if (!키워드들.length) { console.error('사용법. node run.mjs <키워드> [키워드...]'); process.exit(1) }
 const cookie = process.env.THREADS_COOKIE || undefined
 const 상위 = Number(process.env.TOP || 10)
+const 올릴한도 = Number(process.env.LIMIT || Infinity) // 실제로 올릴 편 수. 안 정하면 후보 전부
 
 const 모음 = new Map()
 for (const kw of 키워드들) {
@@ -60,8 +61,16 @@ if (받기) {
 if (재쓰기) {
   const 페르소나 = JSON.parse(await readFile('persona.json', 'utf8'))
   // 레시피가 없는 글은 재구성해봐야 재료만 있고 순서가 빈다. 토큰만 쓰고 버리게 된다
-  const 쓸것 = 정렬.filter(레시피있나)
-  if (쓸것.length < 정렬.length) console.error(`\n레시피 없는 글 ${정렬.length - 쓸것.length}개 제외`)
+  // TOP 은 '몇 편을 들여다볼까' 고, LIMIT 은 '몇 편을 올릴까' 다. 둘을 섞으면
+  // 레시피 없는 글이 걸러진 만큼 후보를 늘려야 하는데 그러다 여러 편이 한꺼번에 올라간다
+  // 사진도 영상도 없는 글은 올려봐야 맹숭맹숭한 글덩이다. 링크 미리보기도 못 막는다
+  const 볼거리있나 = (p) => (p.미디어 ?? []).length > 0
+  const 볼거리 = 정렬.filter(볼거리있나)
+  if (볼거리.length < 정렬.length) console.error(`\n미디어 없는 글 ${정렬.length - 볼거리.length}개 제외`)
+  const 걸러진 = 볼거리.filter(레시피있나)
+  if (걸러진.length < 볼거리.length) console.error(`레시피 없는 글 ${볼거리.length - 걸러진.length}개 제외`)
+  const 쓸것 = 걸러진.slice(0, 올릴한도)
+  if (쓸것.length < 걸러진.length) console.error(`LIMIT=${올릴한도} — ${걸러진.length}편 중 ${쓸것.length}편만 올린다`)
   console.error('내 말투로 다시 쓰는 중...')
   for (const p of 쓸것) {
     try {
@@ -73,7 +82,7 @@ if (재쓰기) {
           const 상품 = await 레시피링크(글.핵심재료, p.code)
           if (상품) {
             글.상품 = 상품
-            글.레시피 = 링크넣기(글.레시피, [`👉 ${상품.이름.slice(0, 30)} ${상품.url}`])
+            글.레시피 = 링크넣기(글.레시피, [`👉 ${상품.이름.slice(0, 30)} ${상품.url}`], { 소개: 글.한줄소개 })
           } else {
             console.error(`  ${p.code} 링크 없음 — "${글.핵심재료}" 에 로켓 상품이 없다`)
           }
@@ -92,6 +101,8 @@ if (재쓰기) {
         const 붙은영상 = 미디어.filter((m) => m.우리가올림).length
         console.log(`  올림 → ${결과.본문번호}  답글 ${결과.답글번호들.length}개` +
           `${붙은영상 ? `  영상 ${붙은영상}개` : ''}${결과.버린영상 ? `  (영상 ${결과.버린영상}개 못 붙임)` : ''}`)
+        // 이걸 빼먹으면 다음 판에 같은 글이 또 올라간다. 실제로 하루 만에 겪었다
+        await 썼다표시(p.code)
         if (결과.답글오류) console.error(`  ⚠️ 답글이 중간에 끊겼다 — ${결과.답글오류.slice(0, 120)}`)
         // 사진이 없으면 링크 답글에 스레드가 멋대로 미리보기 카드를 붙인다. 숨기지 않는다
         if (결과.미리보기붙음) console.error('  ⚠️ 사진이 없어 링크에 미리보기 카드가 붙었을 수 있다')
@@ -99,7 +110,8 @@ if (재쓰기) {
       const w = 글.수량경고
       const 경고 = [
         w.추가됨.length ? `⚠️  원문에 없는 분량이 생겼다: ${w.추가됨.join(', ')}` : '',
-        w.빠짐.length ? `⚠️  원문 분량이 사라졌다(깨졌을 수 있다): ${w.빠짐.join(', ')}` : '',
+        w.빠짐.length ? `⚠️  원문 분량이 사라졌다: ${w.빠짐.join(', ')}` : '',
+        w.깨짐?.length ? `⚠️  원문에 없는 분량꼴이다(글자가 깨졌을 수 있다): ${w.깨짐.join(', ')}` : '',
       ].filter(Boolean).map((s) => '\n' + s).join('')
       console.log(`\n─── ${p.code} ───\n[본문]\n${글.본문}\n\n[레시피]\n${글.레시피}${경고}\n→ ${파일}`)
     } catch (e) {
