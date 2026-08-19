@@ -115,6 +115,14 @@ export const 좁은간격 = (시각들) => {
   return 최소 < 4 ? 최소 : null
 }
 
+// 겹쳐 올리는 것을 막는 간격. 예정 간격보다 30분 짧게 잡는다 —
+// 150분으로 못 박아 두면 2시간마다 도는 시각표가 한 번 걸러 막힌다 (실제로 그랬다)
+export const 띄울분 = (시각들) => {
+  const 최소 = 좁은간격(시각들) ?? (시각들.length < 2 ? 24 : Math.min(
+    ...시각들.map((h, i) => ((시각들[(i + 1) % 시각들.length] - h) + 24) % 24)))
+  return Math.max(30, 최소 * 60 - 30)
+}
+
 const plist글 = (라벨, 스크립트, 계정, 시각들, 기록폴더) => `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -137,6 +145,7 @@ ${시각들.map((h) => `    <dict><key>Hour</key><integer>${h}</integer><key>Min
   <dict>
     <key>PATH</key><string>/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
     <key>LANG</key><string>ko_KR.UTF-8</string>
+    <key>GAP_MIN</key><string>${띄울분(시각들)}</string>
   </dict>
 </dict>
 </plist>

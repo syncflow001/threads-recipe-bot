@@ -38,7 +38,8 @@ echo "═══ ${TITLE}$(date '+%Y-%m-%d %H:%M:%S') ═══" >> "$LOG"
 # 맥이 자는 동안 지나간 시각들을 launchd 가 깨어난 뒤 한꺼번에 실행한다.
 # 그대로 두면 3시간 간격이 깨지고 글이 연달아 올라간다 — 스레드에서 제일 안 좋은 모양이다.
 # 그래서 마지막으로 올린 지 150분이 안 됐으면 이 판은 건너뛴다
-GAP_MIN=150
+# 시각표가 알려 준다. 안 알려 주면 넉넉히 잡는다 (LaunchAgent 가 EnvironmentVariables 로 넘긴다)
+GAP_MIN=${GAP_MIN:-150}
 if [ -f "$LAST" ]; then
   PREV=$(cat "$LAST" 2>/dev/null || echo 0)
   NOW=$(date +%s)
