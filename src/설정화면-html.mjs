@@ -17,6 +17,9 @@ export const 화면 = `<!doctype html>
   header select{width:auto;min-width:11rem}
   .계정줄{display:flex;gap:.4rem;align-items:center;flex-wrap:wrap}
   .계정줄 input{width:11rem}
+  button.지움{background:var(--나쁨);border-color:var(--나쁨);color:#fff}
+  #새계정판 section,#삭제판 section{border-color:var(--강조)}
+  #삭제판 section{border-color:var(--나쁨)}
   #계정알림{max-width:880px;margin:.6rem auto 0;padding:0 1.5rem;font-size:.86rem;font-weight:600}
   main{max-width:880px;margin:0 auto;padding:0 1.5rem 5rem}
   section{background:var(--판);border:1px solid var(--선);border-radius:14px;
@@ -77,14 +80,39 @@ export const 화면 = `<!doctype html>
   <div class="계정줄">
     <select id="계정"></select>
     <button class="연한" id="계정추가단추">＋ 계정 추가</button>
-    <span id="새계정칸" hidden>
-      <input id="새계정" maxlength="8" placeholder="영문·숫자 8자까지" autocomplete="off">
-      <button id="새계정저장">저장</button>
-      <button class="연한" id="새계정취소">취소</button>
-    </span>
+    <button class="지움" id="계정삭제단추">계정 삭제</button>
   </div>
 </header>
 <div id="계정알림"></div>
+
+<main id="새계정판" hidden><section>
+  <h2>새 계정 만들기</h2>
+  <p class="귀띔">이게 어떤 계정인지 알려 주세요. 파일 이름은 저희가 알아서 만듭니다.</p>
+  <label>1. 별칭 <span style="font-weight:400;color:var(--옅은글)">— 화면에 보일 이름입니다</span></label>
+  <input id="ㄴ별칭" maxlength="20" placeholder="알뜰카트">
+  <label>2. 스레드 User ID <span style="font-weight:400;color:var(--옅은글)">— 숫자입니다. 나중에 넣어도 됩니다</span></label>
+  <input id="ㄴuserId" placeholder="17841400000000000">
+  <label>3. 계정 분야</label><select id="ㄴ분야"></select>
+  <label>4. 사용 언어</label><select id="ㄴ언어"></select>
+  <label>5. 제휴 마케팅</label><select id="ㄴ제휴"></select>
+  <div id="ㄴ못함"></div>
+  <div class="줄">
+    <button id="ㄴ저장">이 계정 만들기</button>
+    <button class="연한" id="ㄴ취소">취소</button>
+  </div>
+</section></main>
+
+<main id="삭제판" hidden><section>
+  <h2 style="color:var(--강조)">계정 삭제</h2>
+  <div class="경고" id="삭제설명"></div>
+  <label>확인을 위해 <b id="삭제별칭"></b> 를 그대로 입력해 주세요</label>
+  <input id="ㅅ별칭" autocomplete="off">
+  <div class="줄">
+    <button class="지움" id="ㅅ저장">되돌릴 수 없습니다. 지웁니다</button>
+    <button class="연한" id="ㅅ취소">취소</button>
+  </div>
+  <div class="알림" id="삭제알림"></div>
+</section></main>
 <main>
 
 <section>
@@ -259,43 +287,105 @@ function 그리기(s) {
   for (let i = 0; i < 3; i++) $('예시' + i).value = (m.예시 || [])[i] || ''
 }
 
+function 계정칸그리기(s, 고를것) {
+  마지막상태 = s
+  $('계정').innerHTML = s.계정들.map((c) =>
+    '<option value="' + 안전(c) + '"' + (c === 고를것 ? ' selected' : '') + '>' +
+    안전(s.이름표?.[c] || (c || '첫 계정')) + '</option>').join('')
+  $('계정삭제단추').disabled = !고를것
+}
+
 async function 새로고침() {
   const s = await 부르기('/status')
-  const 고른것 = 계정()
-  $('계정').innerHTML = s.계정들.map((c) =>
-    '<option value="' + c + '"' + (c === 고른것 ? ' selected' : '') + '>' +
-    (c || '첫 계정 (기본)') + '</option>').join('')
+  계정칸그리기(s, 계정())
   그리기(s)
+  $('계정알림').innerHTML = (s.못함 ?? []).length
+    ? '<span class="나쁨">이 계정은 아직 못 돌립니다 — ' + 안전(s.못함.join(' / ')) + '</span>' : ''
   격자그리기(); 글그리기(); 수익그리기()
 }
 $('계정').onchange = 새로고침
 
-const 새칸보이기 = (보일까) => {
-  $('새계정칸').hidden = !보일까
-  $('계정추가단추').hidden = 보일까
-  if (보일까) { $('새계정').value = ''; $('새계정').focus() }
-}
-$('계정추가단추').onclick = () => { $('계정알림').textContent = ''; 새칸보이기(true) }
-$('새계정취소').onclick = () => 새칸보이기(false)
-$('새계정').onkeydown = (e) => { if (e.key === 'Enter') $('새계정저장').click() }
+let 마지막상태 = null
 
-$('새계정저장').onclick = async (e) => {
-  const 이름 = $('새계정').value.trim()
-  if (!이름) return
+const 판보이기 = (어느것) => {
+  $('새계정판').hidden = 어느것 !== '추가'
+  $('삭제판').hidden = 어느것 !== '삭제'
+  document.querySelectorAll('main').forEach((m) => {
+    if (m.id !== '새계정판' && m.id !== '삭제판') m.hidden = !!어느것
+  })
+}
+
+const 고르기채우기 = (id, 목록, 고른것) => {
+  $(id).innerHTML = 목록.map((v) =>
+    '<option' + (v === 고른것 ? ' selected' : '') + '>' + 안전(v) + '</option>').join('')
+}
+
+const 못함그리기 = () => {
+  const 고름 = { 분야: $('ㄴ분야').value, 언어: $('ㄴ언어').value, 제휴: $('ㄴ제휴').value }
+  const 안됨 = []
+  if (고름.분야 !== '요리') 안됨.push('분야 "' + 안전(고름.분야) + '" 는 아직 글을 못 씁니다 (지금은 요리만)')
+  if (고름.언어 !== '한국어') 안됨.push('언어 "' + 안전(고름.언어) + '" 는 아직 못 씁니다 (지금은 한국어만)')
+  if (고름.제휴 !== '쿠팡파트너스' && 고름.제휴 !== '없음')
+    안됨.push('"' + 안전(고름.제휴) + '" 는 아직 링크를 못 만듭니다 (지금은 쿠팡만)')
+  $('ㄴ못함').innerHTML = 안됨.length
+    ? '<div class="경고">만들 수는 있지만 <b>아직 안 돌아갑니다.</b><br>' + 안됨.join('<br>') + '</div>'
+    : ''
+}
+
+$('계정추가단추').onclick = () => {
+  $('계정알림').textContent = ''
+  const g = 마지막상태?.고를것 ?? { 분야: ['요리'], 언어: ['한국어'], 제휴: ['쿠팡파트너스'] }
+  고르기채우기('ㄴ분야', g.분야, '요리')
+  고르기채우기('ㄴ언어', g.언어, '한국어')
+  고르기채우기('ㄴ제휴', g.제휴, '쿠팡파트너스')
+  $('ㄴ별칭').value = ''; $('ㄴuserId').value = ''
+  못함그리기(); 판보이기('추가'); $('ㄴ별칭').focus()
+}
+;['ㄴ분야', 'ㄴ언어', 'ㄴ제휴'].forEach((id) => { $(id).onchange = 못함그리기 })
+$('ㄴ취소').onclick = () => 판보이기(null)
+
+$('ㄴ저장').onclick = async (e) => {
   e.target.disabled = true
   try {
-    const s = await 부르기('/account', { 이름 })
-    새칸보이기(false)
-    // 새 계정을 목록에 넣고 바로 그 계정으로 넘어간다
-    $('계정').innerHTML = s.계정들.map((c) =>
-      '<option value="' + 안전(c) + '"' + (c === 이름 ? ' selected' : '') + '>' +
-      (c || '첫 계정 (기본)') + '</option>').join('')
-    그리기(s)
-    격자그리기(); 글그리기(); 수익그리기()
-    $('계정알림').innerHTML = '<span class="좋음">"' + 안전(이름) +
+    const s = await 부르기('/account', {
+      별칭: $('ㄴ별칭').value, userId: $('ㄴuserId').value,
+      분야: $('ㄴ분야').value, 언어: $('ㄴ언어').value, 제휴: $('ㄴ제휴').value,
+    })
+    판보이기(null)
+    계정칸그리기(s, s.계정)
+    그리기(s); 격자그리기(); 글그리기(); 수익그리기()
+    $('계정알림').innerHTML = '<span class="좋음">"' + 안전(s.정보.별칭) +
       '" 계정을 만들었습니다. 아래 <b>열쇠</b> 와 <b>말투</b> 를 채워 주세요.</span>'
   } catch (err) {
     $('계정알림').innerHTML = '<span class="나쁨">' + 안전(err.message) + '</span>'
+  } finally { e.target.disabled = false }
+}
+
+$('계정삭제단추').onclick = () => {
+  if (!계정()) {
+    $('계정알림').innerHTML = '<span class="나쁨">첫 계정은 지울 수 없습니다.</span>'
+    return
+  }
+  const 별칭 = 마지막상태?.정보?.별칭 ?? 계정()
+  $('삭제별칭').textContent = 별칭
+  $('ㅅ별칭').value = ''
+  $('삭제알림').textContent = ''
+  $('삭제설명').innerHTML = '<b>' + 안전(별칭) + '</b> 계정의 열쇠 · 말투 · 시각표 · 기록이 지워집니다.' +
+    '<br>내려받은 사진과 이미 올린 글은 그대로 남습니다.'
+  판보이기('삭제'); $('ㅅ별칭').focus()
+}
+$('ㅅ취소').onclick = () => 판보이기(null)
+
+$('ㅅ저장').onclick = async (e) => {
+  e.target.disabled = true
+  try {
+    const s = await 부르기('/account-delete', { 별칭: $('ㅅ별칭').value })
+    판보이기(null)
+    계정칸그리기(s, '')
+    그리기(s); 격자그리기(); 글그리기(); 수익그리기()
+    $('계정알림').innerHTML = '<span class="좋음">지웠습니다.</span>'
+  } catch (err) {
+    $('삭제알림').innerHTML = '<span class="나쁨">' + 안전(err.message) + '</span>'
   } finally { e.target.disabled = false }
 }
 

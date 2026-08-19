@@ -1,10 +1,12 @@
 // 터미널 없이 브라우저에서 열쇠·말투를 넣고 돌려 보는 화면 — 내 컴퓨터에서만 열린다
 import { createServer } from 'node:http'
-import { readFile, writeFile, access, readdir } from 'node:fs/promises'
+import { readFile, writeFile, access, readdir, unlink } from 'node:fs/promises'
 import { randomBytes } from 'node:crypto'
 import { spawn } from 'node:child_process'
 import { 화면 } from './src/설정화면-html.mjs'
-import { 수익, 발행격자, 최근글, 시각표켜기, 시각표끄기 } from './src/대시보드.mjs'
+import { 수익, 발행격자, 최근글, 시각표켜기, 시각표끄기, 시각표찾기 } from './src/대시보드.mjs'
+import { 정보, 정보쓰기, 정보지우기, 새이름, 검사, 못하는것,
+  분야들, 언어들, 제휴들 } from './src/계정.mjs'
 import { extname, join, basename } from 'node:path'
 import { createReadStream } from 'node:fs'
 
@@ -70,7 +72,14 @@ async function 상태(계정) {
       예시: p['내 글 예시'] ?? [],
     }
   } catch {}
-  return { 계정, 계정들: await 계정목록(), 열쇠, 말투, 말투있나: !!말투원문 }
+  const 그정보 = await 정보(계정)
+  const 이름표 = {}
+  for (const c of await 계정목록()) 이름표[c] = (await 정보(c)).별칭
+  return {
+    계정, 계정들: await 계정목록(), 이름표, 열쇠, 말투, 말투있나: !!말투원문,
+    정보: 그정보, 못함: 못하는것(그정보),
+    고를것: { 분야: Object.keys(분야들), 언어: Object.keys(언어들), 제휴: Object.keys(제휴들) },
+  }
 }
 
 // 있던 줄은 바꾸고 없던 줄은 붙인다. 손으로 적어 둔 주석과 다른 값은 건드리지 않는다
@@ -102,9 +111,9 @@ async function 말투저장(계정, 받은것) {
 // 계정을 하나 늘린다. 열쇠 서식과 말투 서식을 만들어 두면 그때부터 목록에 뜬다.
 // 레시피 형식·분량 규칙은 첫 계정 것을 물려준다. 말투만 비운다 —
 // 계정마다 달라야 하는 건 '누가 어떻게 말하는가' 지 레시피 생김새가 아니다
-async function 계정만들기(이름) {
-  if (!계정꼴.test(이름)) throw new Error('계정 이름은 영문·숫자 8자까지입니다')
-  if (이름 === 'local' || 이름 === 'example') throw new Error(`"${이름}" 은 쓸 수 없는 이름입니다`)
+async function 계정만들기(받은것) {
+  const 값 = 검사(받은것)
+  const 이름 = await 새이름()
   if (await 있나(열쇠파일(이름))) throw new Error(`"${이름}" 계정이 이미 있습니다`)
 
   const 서식 = await readFile('.env.example', 'utf8').catch(() =>
@@ -120,7 +129,28 @@ async function 계정만들기(이름) {
     '자주 쓰는 표현': [],
     '내 글 예시': [],
   }, null, 2) + '\n')
+  await 정보쓰기(이름, 값)
   return 이름
+}
+
+// 계정을 지운다. 미디어는 손대지 않는다 — 지우면 되돌릴 수 없고, 원글은 남겨 둬도 해가 없다
+async function 계정지우기(계정, 확인별칭) {
+  if (!계정) throw new Error('첫 계정은 지울 수 없습니다')
+  const 그정보 = await 정보(계정)
+  if (String(확인별칭 ?? '').trim() !== 그정보.별칭) {
+    throw new Error(`지우려면 별칭 "${그정보.별칭}" 을 그대로 입력해 주세요`)
+  }
+  await 시각표끄기(계정).catch(() => {}) // 시각표가 없으면 실패하는 게 정상이다
+  await unlink(열쇠파일(계정)).catch(() => {})
+  await unlink(말투파일(계정)).catch(() => {})
+  await unlink(`${계정}-persona.json.backup`).catch(() => {})
+  for (const f of await readdir('logs').catch(() => [])) {
+    if (f.startsWith(`${계정}-`) || f === `마지막발행-${계정}.txt`) {
+      await unlink(join('logs', f)).catch(() => {})
+    }
+  }
+  await 정보지우기(계정)
+  return { 지움: 그정보.별칭 }
 }
 
 // ─── 돌리기 ────────────────────────────────────────────────────────
@@ -237,8 +267,11 @@ const 서버 = createServer(async (req, res) => {
         return 보내기(res, 200, await 시각표끄기(계정))
       }
       if (url.pathname === '/account') {
-        const 새이름 = await 계정만들기(String(몸통.이름 ?? '').trim())
-        return 보내기(res, 200, await 상태(새이름))
+        return 보내기(res, 200, await 상태(await 계정만들기(몸통)))
+      }
+      if (url.pathname === '/account-delete') {
+        await 계정지우기(계정, 몸통.별칭)
+        return 보내기(res, 200, await 상태(''))
       }
       if (url.pathname === '/stop') { 도는중?.kill('SIGTERM'); return 보내기(res, 200, { 멈춤: true }) }
     }

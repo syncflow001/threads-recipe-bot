@@ -13,3 +13,6 @@ persona.json.backup
 
 # 자동 발행 기록
 logs/
+
+# 계정 장부
+계정정보.json

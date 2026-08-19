@@ -3,6 +3,7 @@
 import { 검색, 상세채우기 } from './src/threads.mjs'
 import { 줄세우기 } from './src/score.mjs'
 import { 내려받기, 안쓴것만, 썼다표시 } from './src/media.mjs'
+import { 정보, 미디어뿌리, 분야들, 못하는것 } from './src/계정.mjs'
 import { 재구성, 레시피있나, 링크넣기, 비밀재료막힘 } from './src/compose.mjs'
 import { 레시피링크 } from './src/coupang.mjs'
 import { 글올리기 } from './src/publish.mjs'
@@ -12,8 +13,7 @@ import { readFile, writeFile } from 'node:fs/promises'
 const 받기 = process.argv.includes('--받기')
 const 재쓰기 = process.argv.includes('--재구성')
 const 올리기옵션 = process.argv.includes('--발행')
-const 키워드들 = process.argv.slice(2).filter((a) => !a.startsWith('--'))
-if (!키워드들.length) { console.error('사용법. node run.mjs <키워드> [키워드...]'); process.exit(1) }
+const 준키워드 = process.argv.slice(2).filter((a) => !a.startsWith('--'))
 const cookie = process.env.THREADS_COOKIE || undefined
 // 기본은 "5편 들여다보고 1편만 올린다". 사용자가 정한 값이다.
 // 등급 높은 것부터 고르므로, 5편 중 제일 좋은 하나가 올라간다
@@ -31,6 +31,20 @@ const 링크끄기 = process.env.NOLINK === '1'
 // 같은 사진에 같은 레시피가 두 곳에 뜬다. 그러면 한 사람이 굴리는 게 바로 보인다
 const 프로필 = (process.env.PROFILE || '').trim()
 const 말투파일 = 프로필 ? `persona.${프로필}.json` : 'persona.json'
+const 계정정보 = await 정보(프로필)
+const 뿌리 = 미디어뿌리(프로필)
+
+// 아직 코드가 없는 분야·언어·제휴사를 고른 계정이면 조용히 요리 글을 뱉지 않는다
+// 검색어를 안 주면 그 계정 분야의 기본 검색어를 쓴다. 계정마다 찾는 것이 다르다
+const 키워드들 = 준키워드.length ? 준키워드 : (분야들[계정정보.분야]?.키워드 ?? [])
+if (!키워드들.length) { console.error('사용법. node run.mjs <키워드> [키워드...]'); process.exit(1) }
+
+const 막힌것 = 못하는것(계정정보)
+if (막힌것.length) {
+  console.error(`\n⛔ [${계정정보.별칭}] 이 계정은 아직 못 돌립니다.`)
+  for (const m of 막힌것) console.error(`   - ${m}`)
+  process.exit(1)
+}
 const 꼬리표머리 = 프로필 ? 프로필.slice(0, 8) : 't'
 
 const 모음 = new Map()
@@ -41,7 +55,7 @@ for (const kw of 키워드들) {
 }
 
 // 이미 쓴 것은 여기서 빠진다. 상세 요청도 내려받기도 아낀다
-const 남은것 = await 안쓴것만([...모음.values()])
+const 남은것 = await 안쓴것만([...모음.values()], 뿌리)
 if (남은것.length < 모음.size) console.error(`  이미 쓴 것 ${모음.size - 남은것.length}개 제외`)
 
 // 상세 요청은 무거우니 공유수·좋아요로 먼저 추린다
@@ -68,7 +82,7 @@ for (const p of 정렬) {
 if (받기) {
   console.error('\n미디어 내려받는 중...')
   for (const p of 정렬) {
-    const r = await 내려받기(p)
+    const r = await 내려받기(p, { 뿌리 })
     if (r.건너뜀) { console.log(`  건너뜀 ${p.code} — ${r.건너뜀}`); continue }
     console.log(`  ${p.code}  받음 ${r.파일.length}개${r.실패.length ? `  실패 ${r.실패.length}개 → ${r.실패[0].이유}` : ''}`)
   }
@@ -117,12 +131,12 @@ if (재쓰기) {
         }
       }
 
-      const 파일 = `media/받은것/${p.code}/재구성.json`
+      const 파일 = `${뿌리}/받은것/${p.code}/재구성.json`
       await writeFile(파일, JSON.stringify(글, null, 2))
 
       if (올리기옵션) {
         // 메타는 자기 CDN 영상을 안 받는다. 우리 주소로 갈아 끼운 뒤 올린다
-        const 미디어 = await 영상갈아끼우기(p.미디어, { 받은폴더: `media/받은것/${p.code}`, code: p.code })
+        const 미디어 = await 영상갈아끼우기(p.미디어, { 받은폴더: `${뿌리}/받은것/${p.code}`, code: p.code })
         const 결과 = await 글올리기({ ...글, 미디어 })
         const 붙은영상 = 미디어.filter((m) => m.우리가올림).length
         console.log(`  올림 → ${결과.본문번호}  답글 ${결과.답글번호들.length}개` +
@@ -137,7 +151,7 @@ if (재쓰기) {
         }
         await writeFile(파일, JSON.stringify(글, null, 2))
         // 이걸 빼먹으면 다음 판에 같은 글이 또 올라간다. 실제로 하루 만에 겪었다
-        await 썼다표시(p.code)
+        await 썼다표시(p.code, 뿌리)
         if (결과.답글오류) console.error(`  ⚠️ 답글이 중간에 끊겼다 — ${결과.답글오류.slice(0, 120)}`)
         // 사진이 없으면 링크 답글에 스레드가 멋대로 미리보기 카드를 붙인다. 숨기지 않는다
         if (결과.미리보기붙음) console.error('  ⚠️ 사진이 없어 링크에 미리보기 카드가 붙었을 수 있다')
