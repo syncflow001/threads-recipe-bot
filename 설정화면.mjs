@@ -15,18 +15,33 @@ const 포트 = Number(process.env.PORT || 7788)
 // 기본은 이 컴퓨터에서만 열린다. 아이폰에서도 쓰려면 BIND 로 테일스케일 주소를 준다 —
 // 테일스케일은 내 기기끼리만 통하는 사설망이라 인터넷에 노출되지 않는다.
 // 0.0.0.0 은 쓰지 마라. 같은 와이파이의 아무나 들어와 열쇠를 바꿀 수 있다
-const 묶을곳 = process.env.BIND || '127.0.0.1'
-if (묶을곳 === '0.0.0.0' || 묶을곳 === '::') {
+// 쉼표로 여럿을 줄 수 있다. 테일스케일 주소만 묶으면 테일스케일이 꺼졌을 때
+// 이 컴퓨터에서도 못 연다 — 그래서 127.0.0.1 은 언제나 함께 묶는다
+const 묶을곳들 = [...new Set(['127.0.0.1', ...String(process.env.BIND || '').split(',')])]
+  .map((v) => v.trim()).filter(Boolean)
+if (묶을곳들.some((v) => v === '0.0.0.0' || v === '::')) {
   console.error('BIND 를 0.0.0.0 으로 열지 마세요. 같은 와이파이의 아무나 들어옵니다.')
   process.exit(1)
 }
+const 묶을곳 = 묶을곳들[묶을곳들.length - 1] // 화면에 보여 줄 대표 주소
 
 // 주소·쿠키·파라미터 이름은 전부 영문으로 쓴다. 한글을 쓰면 브라우저가 퍼센트 인코딩해서
 // url.pathname 이 '/%EC%83%81...' 로 오고 문자열 비교가 안 맞는다 — 실제로 당했다.
 // 화면에 보이는 글만 한국어다.
+//
 // 브라우저는 다른 사이트에서도 localhost 로 요청을 보낼 수 있다. 그대로 두면 아무 웹페이지나
-// 우리 화면을 조작해 열쇠를 바꾸거나 글을 올릴 수 있다. 그래서 매번 켤 때마다 열쇠말을 새로 만든다
-const 열쇠말 = randomBytes(24).toString('hex')
+// 우리 화면을 조작해 열쇠를 바꾸거나 글을 올릴 수 있다. 그래서 열쇠말로 문을 잠근다.
+// 열쇠말은 파일에 두고 계속 쓴다 — 켤 때마다 바뀌면 주소를 북마크할 수 없다.
+// 파일은 600 이고 git 에 안 올라간다. 새로 받고 싶으면 그 파일을 지우면 된다
+const 열쇠파일이름 = '.설정화면열쇠'
+const 열쇠말 = await (async () => {
+  const 있던것 = await readFile(열쇠파일이름, 'utf8').catch(() => '')
+  const 다듬 = 있던것.trim()
+  if (/^[0-9a-f]{32,}$/.test(다듬)) return 다듬
+  const 새것 = randomBytes(24).toString('hex')
+  await writeFile(열쇠파일이름, 새것 + '\n', { mode: 0o600 })
+  return 새것
+})()
 
 const 열쇠들 = [
   ['OPENAI_API_KEY', '글을 다시 쓰는 데 필요', true],
@@ -202,7 +217,7 @@ const 몸통읽기 = (req) =>
     req.on('end', () => { try { 맞이(JSON.parse(쌓임 || '{}')) } catch (e) { 뿌리치기(e) } })
   })
 
-const 서버 = createServer(async (req, res) => {
+const 다루기 = async (req, res) => {
   const url = new URL(req.url, 'http://127.0.0.1')
 
   // 첫 방문에서 열쇠말을 쿠키에 심는다. 그다음부터는 쿠키로 확인한다
@@ -222,7 +237,7 @@ const 서버 = createServer(async (req, res) => {
   }
   // 다른 사이트가 보낸 요청은 Origin 이 우리와 다르다. 브라우저가 붙여 주는 값이다
   const 출처 = req.headers.origin
-  const 우리것 = [`http://127.0.0.1:${포트}`, `http://localhost:${포트}`, `http://${묶을곳}:${포트}`]
+  const 우리것 = [`http://localhost:${포트}`, ...묶을곳들.map((v) => `http://${v}:${포트}`)]
   if (출처 && !우리것.includes(출처)) {
     return 보내기(res, 403, { 안됨: '다른 곳에서 온 요청입니다' })
   }
@@ -282,29 +297,28 @@ const 서버 = createServer(async (req, res) => {
   } catch (e) {
     return 보내기(res, 500, { 안됨: e.message })
   }
-})
+}
 
 // 127.0.0.1 로만 연다. 0.0.0.0 으로 열면 같은 와이파이에 있는 아무나 들어와 열쇠를 바꿀 수 있다
-서버.listen(포트, 묶을곳, () => {
-  const 주소 = `http://${묶을곳}:${포트}/?k=${열쇠말}`
-
-  // 더블클릭으로 켰을 때 주소를 손으로 옮기지 않아도 되게 브라우저를 열어 준다.
-  // NOOPEN=1 이면 안 연다 (검사 돌릴 때 창이 계속 뜨면 성가시다)
-  if (process.env.NOOPEN !== '1') {
-    const 열주소 = 묶을곳 === '127.0.0.1' ? 주소 : `http://127.0.0.1:${포트}/?k=${열쇠말}`
-    spawn('open', [열주소], { stdio: 'ignore', detached: true }).unref()
-  }
-
-  console.log(`
+// 주소마다 하나씩 연다. 한 서버는 한 주소에만 묶인다
+for (const 곳 of 묶을곳들) {
+  createServer(다루기).listen(포트, 곳, () => {
+    if (곳 !== 묶을곳) return // 안내는 한 번만 찍는다
+    const 주소 = `http://${묶을곳}:${포트}/?k=${열쇠말}`
+    if (process.env.NOOPEN !== '1') {
+      spawn('open', [주소], { stdio: 'ignore', detached: true }).unref()
+    }
+    console.log(`
 ╭──────────────────────────────────────────────╮
 │  설정 화면이 열렸습니다                       │
 ╰──────────────────────────────────────────────╯
 
 브라우저가 저절로 열립니다. 안 열리면 아래 주소를 붙여넣으세요.
 
-  ${주소}
+${묶을곳들.map((v) => `  http://${v}:${포트}/?k=${열쇠말}`).join('\n')}
 
-${묶을곳 === '127.0.0.1' ? '' : '이 주소는 테일스케일로 이어진 내 기기에서만 열립니다.\n'}주소에 붙은 열쇠는 켤 때마다 새로 만들어집니다.
+이 주소는 바뀌지 않습니다. 북마크해 두고 쓰세요.
 끄려면 이 창에서 Control + C 를 누르세요.
 `)
-})
+  }).on('error', (e) => console.error(`${곳} 을 못 열었습니다 — ${e.message}`))
+}
