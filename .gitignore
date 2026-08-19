@@ -10,3 +10,6 @@ media/
 
 # 설정 도우미가 남기는 이전 말투 파일
 persona.json.backup
+
+# 자동 발행 기록
+logs/

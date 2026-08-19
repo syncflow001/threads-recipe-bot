@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.threads.recipe.bot</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string><여기에_내_폴더_경로>/자동발행.sh</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string><여기에_내_폴더_경로></string>
+
+  <!-- 하루 세 번. 5~6시간 간격을 둔다 — 너무 붙으면 서로 도달을 갉아먹는다 -->
+  <key>StartCalendarInterval</key>
+  <array>
+    <dict><key>Hour</key><integer>8</integer><key>Minute</key><integer>0</integer></dict>
+    <dict><key>Hour</key><integer>13</integer><key>Minute</key><integer>0</integer></dict>
+    <dict><key>Hour</key><integer>19</integer><key>Minute</key><integer>0</integer></dict>
+  </array>
+
+  <!-- 맥이 잠들어 시각을 놓쳤으면 깨어난 뒤 한 번 돌린다 -->
+  <key>RunAtLoad</key>
+  <false/>
+
+  <key>StandardOutPath</key>
+  <string><여기에_내_폴더_경로>/logs/launchd.out</string>
+  <key>StandardErrorPath</key>
+  <string><여기에_내_폴더_경로>/logs/launchd.err</string>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    <key>LANG</key>
+    <string>ko_KR.UTF-8</string>
+  </dict>
+</dict>
+</plist>

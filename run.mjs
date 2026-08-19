@@ -20,6 +20,11 @@ const cookie = process.env.THREADS_COOKIE || undefined
 const 상위 = Number(process.env.TOP || 5)
 const 올릴한도 = Number(process.env.LIMIT || 1)
 
+// 스레드는 사람을 밖으로 내보내는 글을 싫어한다. 모든 글에 링크를 달면 도달이 떨어진다 —
+// 열 편에 한두 편만 링크를 달라는 것이 여러 조사의 공통된 조언이다.
+// NOLINK=1 이면 쿠팡 링크도, 그에 딸린 [광고]·대가성 문구도 넣지 않는다
+const 링크끄기 = process.env.NOLINK === '1'
+
 const 모음 = new Map()
 for (const kw of 키워드들) {
   const 목록 = await 검색(kw, { cookie })
@@ -74,7 +79,7 @@ if (재쓰기) {
   // 한도만큼 채울 때까지 위에서부터 훑는다. 중간에 걸러지는 글이 있어서
   // 미리 잘라 두면 아무것도 못 올리고 끝난다 — 비밀재료를 모르는 글이 그렇다
   if (걸러진.length > 올릴한도) console.error(`LIMIT=${올릴한도} — 후보 ${걸러진.length}편 중 ${올릴한도}편까지만 만든다`)
-  console.error('내 말투로 다시 쓰는 중...')
+  console.error(`내 말투로 다시 쓰는 중...${링크끄기 ? ' (NOLINK=1 — 링크 없이)' : ''}`)
   let 채운수 = 0
   for (const p of 걸러진) {
     if (채운수 >= 올릴한도) break
@@ -86,7 +91,7 @@ if (재쓰기) {
       if (막힘) { console.error(`  ${p.code} 건너뜀 — ${막힘}`); continue }
 
       // 링크는 LLM 이 아니라 여기서 붙인다. 주소를 지어내면 수수료가 날아간다
-      if (글.핵심재료) {
+      if (글.핵심재료 && !링크끄기) {
         try {
           const 상품 = await 레시피링크(글.핵심재료, p.code)
           if (상품) {
