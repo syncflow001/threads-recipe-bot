@@ -3,7 +3,7 @@
 import { 검색, 상세채우기 } from './src/threads.mjs'
 import { 줄세우기 } from './src/score.mjs'
 import { 내려받기, 안쓴것만, 썼다표시 } from './src/media.mjs'
-import { 재구성, 레시피있나, 링크넣기 } from './src/compose.mjs'
+import { 재구성, 레시피있나, 링크넣기, 비밀재료막힘 } from './src/compose.mjs'
 import { 레시피링크 } from './src/coupang.mjs'
 import { 글올리기 } from './src/publish.mjs'
 import { 영상갈아끼우기 } from './src/blob.mjs'
@@ -71,12 +71,19 @@ if (재쓰기) {
   if (볼거리.length < 정렬.length) console.error(`\n미디어 없는 글 ${정렬.length - 볼거리.length}개 제외`)
   const 걸러진 = 볼거리.filter(레시피있나)
   if (걸러진.length < 볼거리.length) console.error(`레시피 없는 글 ${볼거리.length - 걸러진.length}개 제외`)
-  const 쓸것 = 걸러진.slice(0, 올릴한도)
-  if (쓸것.length < 걸러진.length) console.error(`LIMIT=${올릴한도} — ${걸러진.length}편 중 ${쓸것.length}편만 올린다`)
+  // 한도만큼 채울 때까지 위에서부터 훑는다. 중간에 걸러지는 글이 있어서
+  // 미리 잘라 두면 아무것도 못 올리고 끝난다 — 비밀재료를 모르는 글이 그렇다
+  if (걸러진.length > 올릴한도) console.error(`LIMIT=${올릴한도} — 후보 ${걸러진.length}편 중 ${올릴한도}편까지만 만든다`)
   console.error('내 말투로 다시 쓰는 중...')
-  for (const p of 쓸것) {
+  let 채운수 = 0
+  for (const p of 걸러진) {
+    if (채운수 >= 올릴한도) break
     try {
       const 글 = await 재구성(p, { 페르소나 })
+
+      // 별명만 있고 정체를 모르면 읽는 사람이 "킥소스" 가 뭔지 알 길이 없다. 그런 글은 안 쓴다
+      const 막힘 = 비밀재료막힘(글.레시피, 글.비밀재료)
+      if (막힘) { console.error(`  ${p.code} 건너뜀 — ${막힘}`); continue }
 
       // 링크는 LLM 이 아니라 여기서 붙인다. 주소를 지어내면 수수료가 날아간다
       if (글.핵심재료) {
@@ -119,6 +126,7 @@ if (재쓰기) {
         w.깨짐?.length ? `⚠️  원문에 없는 분량꼴이다(글자가 깨졌을 수 있다): ${w.깨짐.join(', ')}` : '',
       ].filter(Boolean).map((s) => '\n' + s).join('')
       console.log(`\n─── ${p.code} ───\n[본문]\n${글.본문}\n\n[레시피]\n${글.레시피}${경고}\n→ ${파일}`)
+      채운수 += 1
     } catch (e) {
       console.error(`  ${p.code} 실패 — ${e.message}`)
     }
