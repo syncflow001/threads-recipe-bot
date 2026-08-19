@@ -5,7 +5,7 @@ import { randomBytes } from 'node:crypto'
 import { spawn } from 'node:child_process'
 import { 화면 } from './src/설정화면-html.mjs'
 import { 수익, 발행격자, 최근글, 시각표켜기, 시각표끄기, 시각표찾기 } from './src/대시보드.mjs'
-import { 정보, 정보쓰기, 정보지우기, 검사, 못하는것, 꼬리겹침, 이름꼴,
+import { 정보, 정보쓰기, 정보지우기, 검사, 못하는것, 꼬리겹침, 이름꼴, 공유열쇠,
   분야들, 언어들, 제휴들 } from './src/계정.mjs'
 import { extname, join, basename } from 'node:path'
 import { createReadStream } from 'node:fs'
@@ -71,11 +71,16 @@ async function 계정목록() {
 
 async function 상태(계정) {
   const 원문 = await readFile(열쇠파일(계정), 'utf8').catch(() => '')
+  const 첫원문 = 계정 ? await readFile('.env.local', 'utf8').catch(() => '') : 원문
   // 값은 절대 밖으로 내보내지 않는다. 채워졌는지만 알린다
-  const 열쇠 = 열쇠들.map(([이름, 설명, 필수]) => ({
-    이름, 설명, 필수,
-    채움: new RegExp(`^${이름}=.+`, 'm').test(원문),
-  }))
+  const 열쇠 = 열쇠들.map(([이름, 설명, 필수]) => {
+    const 공유 = 공유열쇠.has(이름)
+    return {
+      이름, 설명, 필수, 공유,
+      // 공유 열쇠는 첫 계정 파일이 진짜다. 계정 전용 파일은 안 봐도 된다
+      채움: new RegExp(`^${이름}=.+`, 'm').test(공유 ? 첫원문 : 원문),
+    }
+  })
   const 말투원문 = await readFile(말투파일(계정), 'utf8').catch(() => '')
   let 말투 = null
   try {
@@ -98,7 +103,14 @@ async function 상태(계정) {
 }
 
 // 있던 줄은 바꾸고 없던 줄은 붙인다. 손으로 적어 둔 주석과 다른 값은 건드리지 않는다
-async function 열쇠저장(계정, 받은것) {
+async function 열쇠저장(계정, 받은것, 공유무시 = false) {
+  // 공유 열쇠는 어느 계정 화면에서 넣든 첫 계정 파일에 쓴다. 한 곳만 두어야 헷갈리지 않는다
+  if (!공유무시 && 계정) {
+    const 공유것 = Object.fromEntries(Object.entries(받은것).filter(([k]) => 공유열쇠.has(k)))
+    if (Object.keys(공유것).length) await 열쇠저장('', 공유것, true)
+    받은것 = Object.fromEntries(Object.entries(받은것).filter(([k]) => !공유열쇠.has(k)))
+    if (!Object.keys(받은것).length) return
+  }
   const 경로 = 열쇠파일(계정)
   let 원문 = await readFile(경로, 'utf8').catch(() => '')
   for (const [이름, 값] of Object.entries(받은것)) {
@@ -198,7 +210,11 @@ const 기록 = []
 function 돌리기(계정, 단계, 키워드) {
   if (도는중) return { 안됨: '이미 돌고 있습니다' }
   기록.length = 0
-  const 인자 = ['--env-file=' + 열쇠파일(계정), 'run.mjs', ...키워드]
+  // 공유 열쇠는 첫 계정 것을 물려받는다. 뒤 파일이 이긴다
+  const 인자 = [
+    ...(계정 ? ['--env-file=.env.local'] : []),
+    '--env-file=' + 열쇠파일(계정), 'run.mjs', ...키워드,
+  ]
   if (단계 !== '보기') 인자.push('--받기', '--재구성')
   if (단계 === '발행') 인자.push('--발행')
 

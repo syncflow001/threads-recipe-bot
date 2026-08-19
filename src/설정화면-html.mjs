@@ -85,6 +85,8 @@ export const 화면 = `<!doctype html>
   .ㄱ올림{color:var(--좋음)} .ㄱ못올림{color:var(--회색)}
   .ㄱ기록없음,.ㄱ아직{color:var(--선)}
   .뜻{display:flex;gap:1.1rem;flex-wrap:wrap;font-size:.78rem;color:var(--옅은글);margin-top:.9rem}
+  .공유표{display:inline-block;font-size:.68rem;padding:.05rem .35rem;border-radius:5px;
+    background:#e0f2fe;color:#075985;vertical-align:middle;margin-left:.3rem;font-weight:700}
   .사진{width:56px;height:56px;object-fit:cover;border-radius:8px;background:var(--선);display:block}
   .사진없음{width:56px;height:56px;border-radius:8px;background:var(--선);display:grid;
     place-items:center;font-size:1.1rem;color:var(--옅은글)}
@@ -169,7 +171,9 @@ export const 화면 = `<!doctype html>
 <section><details>
   <summary>열쇠</summary>
   <p class="귀띔">채워진 것은 값을 보여 주지 않습니다. 바꿀 때만 새로 넣으세요.<br>
-    <b>스레드 User ID 는 안 넣으셔도 됩니다.</b> 토큰을 저장하면 저희가 알아내 채웁니다.</p>
+    <b>스레드 User ID 는 안 넣으셔도 됩니다.</b> 토큰을 저장하면 저희가 알아내 채웁니다.<br>
+    <b class="공유표">공유</b> 가 붙은 것은 <b>모든 계정이 함께 씁니다.</b>
+    어느 화면에서 넣든 한 곳에 저장되고, 새 계정은 그대로 물려받습니다.</p>
   <div id="나정보"></div>
   <table id="열쇠표"></table>
   <div id="열쇠칸"></div>
@@ -309,10 +313,12 @@ function 그리기(s) {
   $('열쇠표').innerHTML = s.열쇠.map((k) =>
     '<tr><td style="width:1.6rem" class="' + (k.채움 ? '좋음' : k.필수 ? '나쁨' : '') + '">' +
     (k.채움 ? '\\u2713' : k.필수 ? '\\u2717' : '\\u00b7') + '</td>' +
-    '<td class="이름">' + k.이름 + '</td><td style="color:var(--옅은글)">' + k.설명 +
+    '<td class="이름">' + k.이름 + (k.공유 ? '<span class="공유표">공유</span>' : '') +
+    '</td><td style="color:var(--옅은글)">' + k.설명 +
     (k.필수 ? '' : ' <i>(선택)</i>') + '</td></tr>').join('')
   $('열쇠칸').innerHTML = s.열쇠.map((k) =>
-    '<label>' + k.이름 + (k.채움 ? ' — 이미 채워져 있습니다' : '') + '</label>' +
+    '<label>' + k.이름 + (k.공유 ? '<span class="공유표">공유</span>' : '') +
+    (k.채움 ? ' — 이미 채워져 있습니다' : '') + '</label>' +
     '<input type="password" autocomplete="off" data-열쇠="' + k.이름 + '" placeholder="' +
     (k.채움 ? '바꿀 때만 넣으세요' : '값을 붙여넣으세요') + '">').join('')
   const uid = s.정보?.userId

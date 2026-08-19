@@ -15,11 +15,14 @@ PROFILE="${1:-}"
 if [ -n "$PROFILE" ]; then
   export PROFILE
   ENV_FILE=$HOME_DIR/.env.$PROFILE
+  # 공유 열쇠는 첫 계정 것을 물려받는다. 뒤 파일이 이긴다
+  ENV_ARGS=(--env-file="$HOME_DIR/.env.local" --env-file="$ENV_FILE")
   LOG=$LOG_DIR/$PROFILE-$(date +%Y-%m).log
   LAST=$LOG_DIR/마지막발행-$PROFILE.txt
   TITLE="[$PROFILE] "
 else
   ENV_FILE=$HOME_DIR/.env.local
+  ENV_ARGS=(--env-file="$ENV_FILE")
   LOG=$LOG_DIR/$(date +%Y-%m).log
   LAST=$LOG_DIR/마지막발행.txt
   TITLE=""
@@ -52,7 +55,7 @@ fi
 
 # 검색이 조여 있으면 후보가 안 잡힌다. TOP 을 넉넉히 주고 LIMIT 으로 한 편만 묶는다
 START_LINE=$(wc -l < "$LOG")
-TOP=12 LIMIT=1 "$NODE" --env-file="$ENV_FILE" run.mjs 레시피 요리 한식 \
+TOP=12 LIMIT=1 "$NODE" "${ENV_ARGS[@]}" run.mjs 레시피 요리 한식 \
   --받기 --재구성 --발행 >> "$LOG" 2>&1
 CODE=$?
 

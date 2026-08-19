@@ -4,6 +4,16 @@ import { join } from 'node:path'
 
 const 장부 = '계정정보.json'
 
+// 계정이 달라도 같은 열쇠. 첫 계정(.env.local)에 한 번만 넣어 두면 나머지가 물려받는다 —
+// 실행할 때 --env-file 을 둘 준다. 뒤 파일(계정 전용)이 이긴다.
+// 복사해 두지 않는 이유는 하나다. 나중에 값을 바꿀 때 한 곳만 고치면 되기 때문이다
+export const 공유열쇠 = new Set([
+  'OPENAI_API_KEY', 'OPENAI_MODEL',
+  'COUPANG_ACCESS_KEY', 'COUPANG_SECRET_KEY',
+  'BLOB_READ_WRITE_TOKEN',
+  'THREADS_APP_ID', 'THREADS_APP_SECRET',
+])
+
 // 계정 이름은 실제 스레드 아이디다 (@ 뒤의 영문). 파일 이름과 폴더 이름이 된다.
 // 스레드 아이디 규칙과 같게 — 영문 소문자·숫자·점·밑줄, 30자까지
 export const 이름꼴 = /^[a-z0-9._]{1,30}$/
