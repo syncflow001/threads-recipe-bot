@@ -15,6 +15,9 @@ export const 화면 = `<!doctype html>
     display:flex;justify-content:space-between;align-items:flex-end;gap:1rem;flex-wrap:wrap}
   h1{margin:0;font-size:1.45rem;letter-spacing:-.02em}
   header select{width:auto;min-width:11rem}
+  .계정줄{display:flex;gap:.4rem;align-items:center;flex-wrap:wrap}
+  .계정줄 input{width:11rem}
+  #계정알림{max-width:880px;margin:.6rem auto 0;padding:0 1.5rem;font-size:.86rem;font-weight:600}
   main{max-width:880px;margin:0 auto;padding:0 1.5rem 5rem}
   section{background:var(--판);border:1px solid var(--선);border-radius:14px;
     padding:1.4rem;margin-top:1.1rem}
@@ -71,8 +74,17 @@ export const 화면 = `<!doctype html>
 </style></head><body>
 <header>
   <h1>스레드 자동화</h1>
-  <select id="계정"></select>
+  <div class="계정줄">
+    <select id="계정"></select>
+    <button class="연한" id="계정추가단추">＋ 계정 추가</button>
+    <span id="새계정칸" hidden>
+      <input id="새계정" maxlength="8" placeholder="영문·숫자 8자까지" autocomplete="off">
+      <button id="새계정저장">저장</button>
+      <button class="연한" id="새계정취소">취소</button>
+    </span>
+  </div>
 </header>
+<div id="계정알림"></div>
 <main>
 
 <section>
@@ -179,7 +191,8 @@ const 표시 = { 올림: ['\\u25cf', 'ㄱ올림'], 못올림: ['\\u25cc', 'ㄱ�
 async function 격자그리기() {
   const g = await 부르기('/schedule')
   if (!g.시각들.length) {
-    $('격자').innerHTML = '<tr><td class="날">예약된 시각이 없습니다. 자동 발행을 아직 안 켰습니다.</td></tr>'
+    $('격자').innerHTML = '<tr><td class="날">이 계정은 자동 발행이 꺼져 있습니다.' +
+      '<br>켜는 법은 사용법 문서 10-1·10-2절에 있습니다. 그전에도 아래 <b>지금 돌려 보기</b> 로 올릴 수 있습니다.</td></tr>'
     return
   }
   const 머리 = '<tr><td></td>' + g.시각들.map((h) =>
@@ -242,6 +255,35 @@ async function 새로고침() {
   격자그리기(); 글그리기(); 수익그리기()
 }
 $('계정').onchange = 새로고침
+
+const 새칸보이기 = (보일까) => {
+  $('새계정칸').hidden = !보일까
+  $('계정추가단추').hidden = 보일까
+  if (보일까) { $('새계정').value = ''; $('새계정').focus() }
+}
+$('계정추가단추').onclick = () => { $('계정알림').textContent = ''; 새칸보이기(true) }
+$('새계정취소').onclick = () => 새칸보이기(false)
+$('새계정').onkeydown = (e) => { if (e.key === 'Enter') $('새계정저장').click() }
+
+$('새계정저장').onclick = async (e) => {
+  const 이름 = $('새계정').value.trim()
+  if (!이름) return
+  e.target.disabled = true
+  try {
+    const s = await 부르기('/account', { 이름 })
+    새칸보이기(false)
+    // 새 계정을 목록에 넣고 바로 그 계정으로 넘어간다
+    $('계정').innerHTML = s.계정들.map((c) =>
+      '<option value="' + 안전(c) + '"' + (c === 이름 ? ' selected' : '') + '>' +
+      (c || '첫 계정 (기본)') + '</option>').join('')
+    그리기(s)
+    격자그리기(); 글그리기(); 수익그리기()
+    $('계정알림').innerHTML = '<span class="좋음">"' + 안전(이름) +
+      '" 계정을 만들었습니다. 아래 <b>열쇠</b> 와 <b>말투</b> 를 채워 주세요.</span>'
+  } catch (err) {
+    $('계정알림').innerHTML = '<span class="나쁨">' + 안전(err.message) + '</span>'
+  } finally { e.target.disabled = false }
+}
 
 $('열쇠저장').onclick = async (e) => {
   e.target.disabled = true

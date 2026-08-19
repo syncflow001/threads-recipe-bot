@@ -99,6 +99,30 @@ async function 말투저장(계정, 받은것) {
   await writeFile(경로, JSON.stringify(p, null, 2) + '\n')
 }
 
+// 계정을 하나 늘린다. 열쇠 서식과 말투 서식을 만들어 두면 그때부터 목록에 뜬다.
+// 레시피 형식·분량 규칙은 첫 계정 것을 물려준다. 말투만 비운다 —
+// 계정마다 달라야 하는 건 '누가 어떻게 말하는가' 지 레시피 생김새가 아니다
+async function 계정만들기(이름) {
+  if (!계정꼴.test(이름)) throw new Error('계정 이름은 영문·숫자 8자까지입니다')
+  if (이름 === 'local' || 이름 === 'example') throw new Error(`"${이름}" 은 쓸 수 없는 이름입니다`)
+  if (await 있나(열쇠파일(이름))) throw new Error(`"${이름}" 계정이 이미 있습니다`)
+
+  const 서식 = await readFile('.env.example', 'utf8').catch(() =>
+    열쇠들.map(([n]) => `${n}=`).join('\n') + '\n')
+  await writeFile(열쇠파일(이름), 서식, { mode: 0o600 })
+
+  const 바탕 = await readFile('persona.json', 'utf8').then(JSON.parse).catch(() => ({}))
+  await writeFile(말투파일(이름), JSON.stringify({
+    ...바탕,
+    _설명: `${이름} 계정의 말투. 이 화면에서 채우면 된다.`,
+    정체성: '',
+    말투: '',
+    '자주 쓰는 표현': [],
+    '내 글 예시': [],
+  }, null, 2) + '\n')
+  return 이름
+}
+
 // ─── 돌리기 ────────────────────────────────────────────────────────
 // 한 번에 하나만 돈다. 두 판이 겹치면 같은 글을 두 번 올릴 수 있다
 let 도는중 = null
@@ -205,6 +229,10 @@ const 서버 = createServer(async (req, res) => {
         const 키워드 = (몸통.키워드 ?? '').trim().split(/\s+/).filter(Boolean)
         if (!키워드.length) return 보내기(res, 400, { 안됨: '검색어를 하나는 넣어 주세요' })
         return 보내기(res, 200, 돌리기(계정, 몸통.단계, 키워드))
+      }
+      if (url.pathname === '/account') {
+        const 새이름 = await 계정만들기(String(몸통.이름 ?? '').trim())
+        return 보내기(res, 200, await 상태(새이름))
       }
       if (url.pathname === '/stop') { 도는중?.kill('SIGTERM'); return 보내기(res, 200, { 멈춤: true }) }
     }
