@@ -4,7 +4,7 @@ import { readFile, writeFile, access, readdir } from 'node:fs/promises'
 import { randomBytes } from 'node:crypto'
 import { spawn } from 'node:child_process'
 import { 화면 } from './src/설정화면-html.mjs'
-import { 수익, 발행격자, 최근글 } from './src/대시보드.mjs'
+import { 수익, 발행격자, 최근글, 시각표켜기, 시각표끄기 } from './src/대시보드.mjs'
 import { extname, join, basename } from 'node:path'
 import { createReadStream } from 'node:fs'
 
@@ -229,6 +229,12 @@ const 서버 = createServer(async (req, res) => {
         const 키워드 = (몸통.키워드 ?? '').trim().split(/\s+/).filter(Boolean)
         if (!키워드.length) return 보내기(res, 400, { 안됨: '검색어를 하나는 넣어 주세요' })
         return 보내기(res, 200, 돌리기(계정, 몸통.단계, 키워드))
+      }
+      if (url.pathname === '/schedule-on') {
+        return 보내기(res, 200, await 시각표켜기(계정, 몸통.시각))
+      }
+      if (url.pathname === '/schedule-off') {
+        return 보내기(res, 200, await 시각표끄기(계정))
       }
       if (url.pathname === '/account') {
         const 새이름 = await 계정만들기(String(몸통.이름 ?? '').trim())

@@ -105,6 +105,14 @@ export const 화면 = `<!doctype html>
     <span class="ㄱ못올림">◌ 돌았지만 못 올림</span>
     <span>○ 발행 전 · 기록 없음</span>
   </div>
+  <hr style="border:none;border-top:1px solid var(--선);margin:1.2rem 0 .2rem">
+  <label>올릴 시각 (쉼표로 나눠서. 24는 밤 12시입니다)</label>
+  <div class="줄" style="margin-top:.3rem">
+    <input id="시각칸" style="max-width:16rem" placeholder="8, 12, 16, 20, 24">
+    <button id="시각표켜기">자동 발행 켜기</button>
+    <button class="연한" id="시각표끄기">끄기</button>
+  </div>
+  <div class="알림" id="시각표알림"></div>
 </section>
 
 <section><details>
@@ -188,8 +196,14 @@ async function 수익그리기() {
 const 표시 = { 올림: ['\\u25cf', 'ㄱ올림'], 못올림: ['\\u25cc', 'ㄱ못올림'],
   기록없음: ['\\u25cb', 'ㄱ기록없음'], 아직: ['\\u25cb', 'ㄱ아직'] }
 
+// 계정마다 시각을 엇갈리게 권한다. 같은 시각에 두 계정이 올리면 한 사람이 굴리는 게 보인다
+const 권하는시각 = (있는것) => (있는것.length ? 있는것 : [8, 12, 16, 20, 24])
+  .map((h) => (h === 0 ? 24 : h)).join(', ')
+
 async function 격자그리기() {
   const g = await 부르기('/schedule')
+  $('시각칸').value = 권하는시각(g.시각들)
+  $('시각표끄기').disabled = !g.시각들.length
   if (!g.시각들.length) {
     $('격자').innerHTML = '<tr><td class="날">이 계정은 자동 발행이 꺼져 있습니다.' +
       '<br>켜는 법은 사용법 문서 10-1·10-2절에 있습니다. 그전에도 아래 <b>지금 돌려 보기</b> 로 올릴 수 있습니다.</td></tr>'
@@ -322,6 +336,32 @@ document.querySelectorAll('[data-단계]').forEach((b) => {
   }
 })
 $('멈추기').onclick = () => 부르기('/stop', {})
+
+const 시각표알림 = (반, 글) => { $('시각표알림').innerHTML = '<span class="' + 반 + '">' + 글 + '</span>' }
+
+$('시각표켜기').onclick = async (e) => {
+  if (!confirm('이 계정의 자동 발행을 켭니다. 정해진 시각마다 실제로 글이 올라갑니다. 계속할까요?')) return
+  e.target.disabled = true
+  try {
+    const r = await 부르기('/schedule-on', { 시각: $('시각칸').value })
+    시각표알림('좋음', '켰습니다. ' + r.시각들.map((h) => (h === 0 ? 24 : h) + '시').join(' · ') +
+      (r.좁은간격 ? ' <span class="나쁨">— 간격이 ' + r.좁은간격 +
+        '시간뿐입니다. 4시간 이상 띄우는 게 좋습니다.</span>' : ''))
+    격자그리기()
+  } catch (err) { 시각표알림('나쁨', 안전(err.message)) }
+  finally { e.target.disabled = false }
+}
+
+$('시각표끄기').onclick = async (e) => {
+  if (!confirm('이 계정의 자동 발행을 끕니다. 계속할까요?')) return
+  e.target.disabled = true
+  try {
+    await 부르기('/schedule-off', {})
+    시각표알림('좋음', '껐습니다. 이제 저절로 올라가지 않습니다.')
+    격자그리기()
+  } catch (err) { 시각표알림('나쁨', 안전(err.message)) }
+  finally { e.target.disabled = false }
+}
 
 let 보는중 = null
 function 보기시작() {

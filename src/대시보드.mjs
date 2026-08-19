@@ -1,5 +1,5 @@
 // 대시보드에 보여줄 것을 모은다 — 수익 · 발행 현황 · 최근 올린 글
-import { readFile, readdir, stat } from 'node:fs/promises'
+import { readFile, readdir, stat, writeFile, unlink, chmod } from 'node:fs/promises'
 import { join } from 'node:path'
 import { homedir } from 'node:os'
 import { execFile } from 'node:child_process'
@@ -68,25 +68,103 @@ export async function 수익({ 일수 = 14, 캐시초 = 300 } = {}) {
 // ─── 발행 현황 ─────────────────────────────────────────────────────
 // 예정 시각은 LaunchAgent 에서 읽는다. 라벨이 아니라 '우리 자동발행.sh 를 부르는가' 로 찾는다 —
 // 배포판은 라벨이 다르기 때문이다
-export async function 예정시각(계정, 뿌리 = process.cwd()) {
+export async function 시각표찾기(계정) {
   const 곳 = join(homedir(), 'Library', 'LaunchAgents')
   let 파일들 = []
-  try { 파일들 = (await readdir(곳)).filter((f) => f.endsWith('.plist')) } catch { return [] }
+  try { 파일들 = (await readdir(곳)).filter((f) => f.endsWith('.plist')) } catch { return null }
 
   for (const f of 파일들) {
     try {
       const { stdout } = await 실행('plutil', ['-convert', 'json', '-o', '-', join(곳, f)])
       const d = JSON.parse(stdout)
-      const 인자 = d.ProgramArguments ?? []
-      if (!인자.some((a) => String(a).includes('자동발행.sh'))) continue
-      // 인자 맨 뒤가 계정 이름이다. 없으면 첫 계정이다
-      const 그계정 = 인자.length > 2 && !String(인자[2]).includes('/') ? String(인자[2]) : ''
+      const 인자 = (d.ProgramArguments ?? []).map(String)
+      if (!인자.some((a) => a.includes('자동발행.sh'))) continue
+      // 인자 맨 뒤가 계정 이름이다. 경로가 아니면 계정으로 본다. 없으면 첫 계정이다
+      const 끝 = 인자[인자.length - 1]
+      const 그계정 = 인자.length > 2 && !끝.includes('/') ? 끝 : ''
       if (그계정 !== 계정) continue
-      const 시각 = (d.StartCalendarInterval ?? []).map((s) => Number(s.Hour) || 0)
-      return [...new Set(시각)].sort((a, b) => a - b)
+      return {
+        경로: join(곳, f),
+        라벨: d.Label ?? f.replace(/\.plist$/, ''),
+        시각들: [...new Set((d.StartCalendarInterval ?? []).map((x) => Number(x.Hour) || 0))].sort((a, b) => a - b),
+      }
     } catch {}
   }
-  return []
+  return null
+}
+
+export const 예정시각 = async (계정) => (await 시각표찾기(계정))?.시각들 ?? []
+
+// 화면에서 자동 발행을 켜고 끈다. 맥의 시스템 폴더에 파일을 넣고 launchctl 을 부른다
+const 시각다듬기 = (받은것) => {
+  const 시 = [...new Set(
+    String(받은것 ?? '').split(/[^0-9]+/).filter(Boolean)
+      .map((n) => Number(n) % 24) // 24시는 0시다
+  )].sort((a, b) => a - b)
+  if (!시.length) throw new Error('시각을 하나는 넣어 주세요 (예: 8, 12, 16, 20, 24)')
+  if (시.length > 12) throw new Error('하루 12번을 넘기지 마세요')
+  if (시.some((h) => h < 0 || h > 23)) throw new Error('시각은 0~24 사이여야 합니다')
+  return 시
+}
+
+// 붙은 시각끼리 몇 시간 벌어지는지. 조사에서 최소 4시간을 권했다 — 어기면 알리되 막지는 않는다
+export const 좁은간격 = (시각들) => {
+  if (시각들.length < 2) return null
+  const 사이 = 시각들.map((h, i) => ((시각들[(i + 1) % 시각들.length] - h) + 24) % 24)
+  const 최소 = Math.min(...사이)
+  return 최소 < 4 ? 최소 : null
+}
+
+const plist글 = (라벨, 스크립트, 계정, 시각들, 기록폴더) => `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>${라벨}</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>${스크립트}</string>${계정 ? `\n    <string>${계정}</string>` : ''}
+  </array>
+  <key>WorkingDirectory</key><string>${기록폴더}</string>
+  <key>StartCalendarInterval</key>
+  <array>
+${시각들.map((h) => `    <dict><key>Hour</key><integer>${h}</integer><key>Minute</key><integer>0</integer></dict>`).join('\n')}
+  </array>
+  <key>RunAtLoad</key><false/>
+  <key>StandardOutPath</key><string>${기록폴더}/logs/launchd${계정 ? '-' + 계정 : ''}.out</string>
+  <key>StandardErrorPath</key><string>${기록폴더}/logs/launchd${계정 ? '-' + 계정 : ''}.err</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key><string>/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    <key>LANG</key><string>ko_KR.UTF-8</string>
+  </dict>
+</dict>
+</plist>
+`
+
+export async function 시각표켜기(계정, 받은시각, 뿌리 = process.cwd()) {
+  const 시각들 = 시각다듬기(받은시각)
+  const 스크립트 = join(뿌리, '자동발행.sh')
+  if (!(await stat(스크립트).catch(() => null))) throw new Error('자동발행.sh 를 못 찾았습니다')
+  await chmod(스크립트, 0o755).catch(() => {})
+
+  // 이미 있으면 그 파일을 그대로 쓴다. 새로 만들면 같은 일을 하는 시각표가 둘이 된다
+  const 있던것 = await 시각표찾기(계정)
+  const 라벨 = 있던것?.라벨 ?? `com.threads.auto.${계정 || 'main'}`
+  const 경로 = 있던것?.경로 ?? join(homedir(), 'Library', 'LaunchAgents', `${라벨}.plist`)
+
+  await writeFile(경로, plist글(라벨, 스크립트, 계정, 시각들, 뿌리))
+  await 실행('launchctl', ['unload', 경로]).catch(() => {}) // 처음이면 실패하는 게 정상이다
+  await 실행('launchctl', ['load', 경로])
+  return { 시각들, 라벨, 좁은간격: 좁은간격(시각들) }
+}
+
+export async function 시각표끄기(계정) {
+  const 있던것 = await 시각표찾기(계정)
+  if (!있던것) throw new Error('켜져 있는 시각표가 없습니다')
+  await 실행('launchctl', ['unload', 있던것.경로]).catch(() => {})
+  await unlink(있던것.경로)
+  return { 껐음: true }
 }
 
 // 기록에서 판마다 (때, 결과) 를 뽑는다. 머리글이 '═══ [계정] 2026-08-19 13:00:01 ═══' 꼴이다
