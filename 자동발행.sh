@@ -1,5 +1,5 @@
 #!/bin/bash
-# 3시간마다 한 편씩 자동으로 올린다 — LaunchAgent 가 하루 여덟 번 부른다
+# 정해진 시각에 한 편씩 자동으로 올린다 — LaunchAgent 가 부른다. 계정 이름을 인자로 받는다
 # (bash 는 한글 변수명을 못 쓴다. 주석과 화면 글만 한국어다)
 set -uo pipefail
 
@@ -8,13 +8,32 @@ HOME_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 NODE="$(command -v node || echo /usr/local/bin/node)"
 LOG_DIR=$HOME_DIR/logs
 mkdir -p "$LOG_DIR"
-LOG=$LOG_DIR/$(date +%Y-%m).log
-LAST=$LOG_DIR/마지막발행.txt
+# 계정 이름을 첫 인자로 받는다. 안 주면 지금까지 쓰던 첫 계정이다.
+#   ./자동발행.sh        →  .env.local · persona.json · logs/2026-08.log
+#   ./자동발행.sh b      →  .env.b     · persona.b.json · logs/b-2026-08.log
+PROFILE="${1:-}"
+if [ -n "$PROFILE" ]; then
+  export PROFILE
+  ENV_FILE=$HOME_DIR/.env.$PROFILE
+  LOG=$LOG_DIR/$PROFILE-$(date +%Y-%m).log
+  LAST=$LOG_DIR/마지막발행-$PROFILE.txt
+  TITLE="[$PROFILE] "
+else
+  ENV_FILE=$HOME_DIR/.env.local
+  LOG=$LOG_DIR/$(date +%Y-%m).log
+  LAST=$LOG_DIR/마지막발행.txt
+  TITLE=""
+fi
 
 cd "$HOME_DIR" || exit 1
 
+if [ ! -f "$ENV_FILE" ]; then
+  echo "‼️  열쇠 파일이 없다: $ENV_FILE" >> "$LOG"
+  exit 1
+fi
+
 echo "" >> "$LOG"
-echo "═══ $(date '+%Y-%m-%d %H:%M:%S') ═══" >> "$LOG"
+echo "═══ ${TITLE}$(date '+%Y-%m-%d %H:%M:%S') ═══" >> "$LOG"
 
 # 맥이 자는 동안 지나간 시각들을 launchd 가 깨어난 뒤 한꺼번에 실행한다.
 # 그대로 두면 3시간 간격이 깨지고 글이 연달아 올라간다 — 스레드에서 제일 안 좋은 모양이다.
@@ -32,7 +51,7 @@ fi
 
 # 검색이 조여 있으면 후보가 안 잡힌다. TOP 을 넉넉히 주고 LIMIT 으로 한 편만 묶는다
 START_LINE=$(wc -l < "$LOG")
-TOP=12 LIMIT=1 "$NODE" --env-file="$HOME_DIR/.env.local" run.mjs 레시피 요리 한식 \
+TOP=12 LIMIT=1 "$NODE" --env-file="$ENV_FILE" run.mjs 레시피 요리 한식 \
   --받기 --재구성 --발행 >> "$LOG" 2>&1
 CODE=$?
 

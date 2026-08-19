@@ -32,9 +32,11 @@ async function 부르기(method, path, body, { accessKey = process.env.COUPANG_A
 const 허용 = /^[0-9A-Za-z_-]+$/
 export const SUBID_최대길이 = 20
 
-export function 꼬리표(code) {
-  const id = `t${code}`
-  if (!허용.test(id)) throw new Error(`SubID 에 쓸 수 없는 문자가 있다: ${code}`)
+// 계정을 여럿 굴리면 어느 계정이 벌었는지도 갈라야 한다. 머리글자로 가른다.
+// 기본값 't' 는 첫 계정이 지금까지 써 온 값이다 — 바꾸면 지난 통계와 끊긴다.
+export function 꼬리표(code, 머리 = 't') {
+  const id = `${머리}${code}`
+  if (!허용.test(id)) throw new Error(`SubID 에 쓸 수 없는 문자가 있다: ${id}`)
   if (id.length > SUBID_최대길이) throw new Error(`SubID 가 최대 길이를 넘었다: ${id}`)
   return id
 }
@@ -86,8 +88,8 @@ export function 고르기(목록, 키워드) {
 }
 
 // 검색 → 로켓 중 가장 맞는 것 → 꼬리표 붙인 링크. 레시피에 넣을 한 줄을 만든다.
-export async function 레시피링크(키워드, code, { 개수 = 10, ...opts } = {}) {
+export async function 레시피링크(키워드, code, { 개수 = 10, 머리 = 't', ...opts } = {}) {
   const 상품 = 고르기(await 상품검색(키워드, { 개수, ...opts }), 키워드)
   if (!상품) return null // 로켓이 없거나 못 찾으면 지어내지 않는다
-  return { 이름: 상품.이름, 가격: 상품.가격, url: await 링크만들기(상품.url, 꼬리표(code), opts) }
+  return { 이름: 상품.이름, 가격: 상품.가격, url: await 링크만들기(상품.url, 꼬리표(code, 머리), opts) }
 }

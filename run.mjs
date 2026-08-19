@@ -25,6 +25,14 @@ const 올릴한도 = Number(process.env.LIMIT || 1)
 // NOLINK=1 이면 쿠팡 링크도, 그에 딸린 [광고]·대가성 문구도 넣지 않는다
 const 링크끄기 = process.env.NOLINK === '1'
 
+// 계정을 여럿 굴린다. PROFILE 을 안 주면 지금까지 쓰던 첫 계정 그대로다.
+//   PROFILE=b  →  말투는 persona.b.json, 쿠팡 꼬리표는 b로 시작
+// 미디어(media/)는 일부러 계정끼리 함께 쓴다 — 갈라 두면 같은 원글을 두 계정이 올려
+// 같은 사진에 같은 레시피가 두 곳에 뜬다. 그러면 한 사람이 굴리는 게 바로 보인다
+const 프로필 = (process.env.PROFILE || '').trim()
+const 말투파일 = 프로필 ? `persona.${프로필}.json` : 'persona.json'
+const 꼬리표머리 = 프로필 ? 프로필.slice(0, 8) : 't'
+
 const 모음 = new Map()
 for (const kw of 키워드들) {
   const 목록 = await 검색(kw, { cookie })
@@ -66,7 +74,7 @@ if (받기) {
 }
 
 if (재쓰기) {
-  const 페르소나 = JSON.parse(await readFile('persona.json', 'utf8'))
+  const 페르소나 = JSON.parse(await readFile(말투파일, 'utf8'))
   // 레시피가 없는 글은 재구성해봐야 재료만 있고 순서가 빈다. 토큰만 쓰고 버리게 된다
   // TOP 은 '몇 편을 들여다볼까' 고, LIMIT 은 '몇 편을 올릴까' 다. 둘을 섞으면
   // 레시피 없는 글이 걸러진 만큼 후보를 늘려야 하는데 그러다 여러 편이 한꺼번에 올라간다
@@ -93,7 +101,7 @@ if (재쓰기) {
       // 링크는 LLM 이 아니라 여기서 붙인다. 주소를 지어내면 수수료가 날아간다
       if (글.핵심재료 && !링크끄기) {
         try {
-          const 상품 = await 레시피링크(글.핵심재료, p.code)
+          const 상품 = await 레시피링크(글.핵심재료, p.code, { 머리: 꼬리표머리 })
           if (상품) {
             글.상품 = 상품
             // 상품 이름은 한 번, 주소는 두 줄. 사용자가 벤치마킹한 계정들이 그렇게 한다 —

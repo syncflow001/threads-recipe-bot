@@ -342,6 +342,17 @@ assert.deepEqual(수량대조('킥소스 1티스푼', '킥소스 1t (작은술)'
 assert.deepEqual(수량대조('설탕 2큰술', '설탕 2t (작은술)').빠짐, ['2T'],
   '큰술을 작은술로 바꾸면 3배 차이다. 반드시 잡아야 한다')
 
+// 계정을 여럿 굴릴 때 어느 계정이 벌었는지 갈라야 한다
+assert.equal(꼬리표('DcM3fQ4jd3G'), 'tDcM3fQ4jd3G', '계정을 안 주면 지금까지 쓰던 t 그대로다')
+assert.equal(꼬리표('DcM3fQ4jd3G', 'b'), 'bDcM3fQ4jd3G', '계정 머리글자가 앞에 붙는다')
+assert.notEqual(꼬리표('DcM3fQ4jd3G', 'b'), 꼬리표('DcM3fQ4jd3G'), '계정이 다르면 꼬리표도 다르다')
+assert.throws(() => 꼬리표('DcM3fQ4jd3G', 'verylongname'), /최대 길이/,
+  `계정 이름이 길면 SubID 가 ${SUBID_최대길이}자를 넘는다`)
+assert.throws(() => 꼬리표('DcM3fQ4jd3G', '둘째'), /쓸 수 없는 문자/,
+  '계정 이름은 영문·숫자만 된다. 한글을 쓰면 여기서 걸린다')
+assert.throws(() => 꼬리표('DcM3fQ4jd3G', 'a&b'), /쓸 수 없는 문자/,
+  '& 가 들어가면 남이 자기 제휴 ID 를 끼워 넣을 수 있다')
+
 // 비밀재료 — 별명만 있고 정체를 모르면 그 글을 쓰지 않는다
 import { 비밀재료막힘 } from './src/compose.mjs'
 const 킥레시피 = '🛒 준비물\n사과 1/2개\n킥소스 1티스푼'
@@ -365,7 +376,7 @@ const 섞인것 = 줄세우기([
 assert.deepEqual(섞인것.map((p) => p.등급), ['플래티넘', '골드', '실버', '브론즈', '미달'],
   '비율이 아무리 높아도 미달은 맨 뒤다')
 
-console.log('통과 — 재구성 검사 51개')
+console.log('통과 — 재구성 검사 57개')
 
 
 // --- 발행 ---
