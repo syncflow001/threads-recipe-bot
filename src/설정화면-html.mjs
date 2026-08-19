@@ -56,10 +56,26 @@ export const 화면 = `<!doctype html>
   .숫자줄{display:flex;gap:2rem;flex-wrap:wrap;margin:.2rem 0 1.2rem}
   .숫자 b{display:block;font-size:1.7rem;letter-spacing:-.03em;line-height:1.15}
   .숫자 span{font-size:.78rem;color:var(--옅은글)}
-  .막대{display:flex;align-items:flex-end;gap:3px;height:72px;border-bottom:1px solid var(--선);padding-bottom:2px}
-  .막대 i{flex:1;background:var(--강조);border-radius:3px 3px 0 0;min-height:2px;opacity:.85}
-  .막대 i.빔{background:var(--선)}
-  .막대 i.깎임{background:var(--나쁨)}
+  .막대{display:flex;align-items:flex-end;gap:3px;height:72px;border-bottom:1px solid var(--선);
+    padding-bottom:2px;overflow:visible}
+  /* 막대가 2px 밖에 안 될 때가 있어 거기에 마우스를 올리기 어렵다. 기둥 전체를 잡이로 쓴다 */
+  .칸{flex:1;height:100%;display:flex;align-items:flex-end;position:relative;cursor:default}
+  .칸 i{width:100%;background:var(--강조);border-radius:3px 3px 0 0;min-height:2px;opacity:.85}
+  .칸:hover i,.칸.짚음 i{opacity:1}
+  .칸 i.빔{background:var(--선)}
+  .칸 i.깎임{background:var(--나쁨)}
+  .칸 b{display:none;position:absolute;bottom:100%;left:50%;transform:translateX(-50%);
+    margin-bottom:8px;background:var(--글);color:#fff;padding:.45rem .65rem;border-radius:9px;
+    font-size:.73rem;font-weight:600;line-height:1.45;white-space:nowrap;text-align:center;z-index:9;
+    box-shadow:0 4px 14px rgba(0,0,0,.18)}
+  .칸 b::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);
+    border:5px solid transparent;border-top-color:var(--글)}
+  .칸:hover b,.칸.짚음 b{display:block}
+  /* 맨 끝 기둥은 말풍선이 화면 밖으로 나간다 */
+  .칸:first-child b{left:0;transform:none}
+  .칸:first-child b::after{left:1rem}
+  .칸:last-child b{left:auto;right:0;transform:none}
+  .칸:last-child b::after{left:auto;right:1rem}
   .막대날짜{display:flex;gap:3px;font-size:.62rem;color:var(--옅은글);margin-top:.3rem}
   .막대날짜 span{flex:1;text-align:center}
   .격자{border-collapse:separate;border-spacing:0 .1rem}
@@ -210,10 +226,26 @@ async function 수익그리기() {
     '<div class="숫자"><b>' + r.클릭.toLocaleString('ko-KR') + '</b><span>이번 달 클릭</span></div>' +
     '<div class="숫자"><b>' + r.주문.toLocaleString('ko-KR') + '</b><span>이번 달 주문</span></div>'
   const 최대 = Math.max(1, ...r.최근.map((d) => Math.abs(d.수수료)))
-  $('막대').innerHTML = r.최근.map((d) =>
-    '<i class="' + (d.수수료 < 0 ? '깎임' : d.수수료 ? '' : '빔') + '" title="' +
-    d.날짜 + '  ' + 돈(d.수수료) + '" style="height:' +
-    Math.max(2, (Math.abs(d.수수료) / 최대) * 70) + 'px"></i>').join('')
+  $('막대').innerHTML = r.최근.map((d) => {
+    const 높이 = Math.max(2, (Math.abs(d.수수료) / 최대) * 70)
+    const 말풍선 = 안전(d.날짜.slice(5).replace('-', '월 ') + '일') + '<br>' +
+      '<span style="font-size:.95rem">' + 돈(d.수수료) + '</span><br>' +
+      '클릭 ' + d.클릭 + ' · 주문 ' + d.주문
+    return '<div class="칸"><b>' + 말풍선 + '</b><i class="' +
+      (d.수수료 < 0 ? '깎임' : d.수수료 ? '' : '빔') + '" style="height:' + 높이 + 'px"></i></div>'
+  }).join('')
+  // 아이폰에는 마우스 오버가 없다. 눌러도 뜨게 한다 — 폰에서 대시보드를 보기 때문이다
+  $('막대').querySelectorAll('.칸').forEach((칸) => {
+    칸.onpointerdown = () => {
+      const 이미 = 칸.classList.contains('짚음')
+      $('막대').querySelectorAll('.칸').forEach((c) => c.classList.remove('짚음'))
+      if (!이미) 칸.classList.add('짚음')
+    }
+  })
+  document.addEventListener('pointerdown', (e) => {
+    if (!e.target.closest('.칸')) $('막대').querySelectorAll('.칸').forEach((c) => c.classList.remove('짚음'))
+  })
+
   $('막대날짜').innerHTML = r.최근.map((d, i) =>
     '<span>' + (i % 3 === 0 ? d.날짜.slice(5).replace('-', '/') : '') + '</span>').join('')
   $('수익알림').innerHTML = r.안됨
