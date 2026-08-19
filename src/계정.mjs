@@ -4,9 +4,17 @@ import { join } from 'node:path'
 
 const 장부 = '계정정보.json'
 
-// 파일 이름에 쓸 짧은 영문 이름은 우리가 만든다. 사용자는 별칭만 정한다 —
-// 쿠팡 SubID 가 20자 제한이라 한글이나 긴 이름을 못 쓴다 (src/coupang.mjs)
-export const 이름꼴 = /^[0-9A-Za-z_-]{1,8}$/
+// 계정 이름은 실제 스레드 아이디다 (@ 뒤의 영문). 파일 이름과 폴더 이름이 된다.
+// 스레드 아이디 규칙과 같게 — 영문 소문자·숫자·점·밑줄, 30자까지
+export const 이름꼴 = /^[a-z0-9._]{1,30}$/
+
+// 쿠팡 SubID 는 [0-9A-Za-z_-] 20자까지고 글번호가 11자다. 계정 이름이 점을 담거나 길면 못 쓴다.
+// 그래서 꼬리표에 쓸 머리는 따로 줄인다 — altteul.cart → altteulc
+export function 꼬리머리(계정) {
+  if (!계정) return 't' // 첫 계정이 지금까지 써 온 값이다. 바꾸면 지난 통계와 끊긴다
+  const 줄인것 = String(계정).replace(/[^0-9A-Za-z]/g, '').slice(0, 8)
+  return 줄인것 || 't'
+}
 
 // 분야마다 무엇을 찾고 어떻게 쓰는지가 다르다. 지금은 요리 하나만 채워져 있다.
 // 새 분야를 넣으려면 여기 한 덩이를 더 쓰고 src/compose.mjs 의 지시문을 그 분야 것으로 갈아 끼운다
@@ -63,14 +71,14 @@ export async function 정보쓰기(계정, 값, 뿌리 = process.cwd()) {
   return { ...전부[계정], 계정 }
 }
 
-// 다음 빈 이름을 찾는다. a1, a2 … 사용자는 이 이름을 볼 일이 없다
-export async function 새이름(뿌리 = process.cwd()) {
-  const 파일들 = await readdir(뿌리).catch(() => [])
-  const 있는것 = new Set(파일들.map((f) => f.match(/^\.env\.([0-9A-Za-z_-]{1,8})$/)?.[1]).filter(Boolean))
+// 꼬리표 머리가 겹치면 어느 계정이 벌었는지 못 가른다. 미리 막는다
+export async function 꼬리겹침(계정, 뿌리 = process.cwd()) {
+  const 머리 = 꼬리머리(계정)
   const 전부 = await 장부읽기(뿌리)
-  for (const k of Object.keys(전부)) if (k) 있는것.add(k)
-  for (let i = 1; i < 1000; i++) if (!있는것.has(`a${i}`)) return `a${i}`
-  throw new Error('계정을 더 만들 수 없습니다')
+  for (const 딴계정 of Object.keys(전부)) {
+    if (딴계정 !== 계정 && 꼬리머리(딴계정) === 머리) return 딴계정
+  }
+  return null
 }
 
 export async function 정보지우기(계정, 뿌리 = process.cwd()) {
@@ -85,15 +93,18 @@ export async function 정보지우기(계정, 뿌리 = process.cwd()) {
 export const 미디어뿌리 = (계정) => (계정 ? join('media', 계정) : 'media')
 
 export function 검사(값) {
+  const 계정 = String(값.계정 ?? '').trim().toLowerCase()
+  if (!계정) throw new Error('스레드 계정 이름을 넣어 주세요 (@ 뒤의 영문)')
+  if (!이름꼴.test(계정)) throw new Error('계정 이름은 영문 소문자·숫자·점·밑줄만 됩니다')
+  if (계정 === 'local' || 계정 === 'example') throw new Error(`"${계정}" 은 쓸 수 없는 이름입니다`)
   const 별칭 = String(값.별칭 ?? '').trim()
-  if (!별칭) throw new Error('별칭을 넣어 주세요')
   if (별칭.length > 20) throw new Error('별칭은 20자까지입니다')
   const userId = String(값.userId ?? '').trim()
   if (userId && !/^\d{5,25}$/.test(userId)) throw new Error('스레드 User ID 는 숫자여야 합니다')
   if (!분야들[값.분야]) throw new Error('없는 분야입니다')
   if (!언어들[값.언어]) throw new Error('없는 언어입니다')
   if (!제휴들[값.제휴]) throw new Error('없는 제휴사입니다')
-  return { 별칭, userId, 분야: 값.분야, 언어: 값.언어, 제휴: 값.제휴 }
+  return { 계정, 별칭: 별칭 || 계정, userId, 분야: 값.분야, 언어: 값.언어, 제휴: 값.제휴 }
 }
 
 // 아직 코드가 없는 것을 고르면 무엇이 안 되는지 알린다. 조용히 요리 글을 뱉으면 안 된다

@@ -5,7 +5,7 @@ import { randomBytes } from 'node:crypto'
 import { spawn } from 'node:child_process'
 import { 화면 } from './src/설정화면-html.mjs'
 import { 수익, 발행격자, 최근글, 시각표켜기, 시각표끄기, 시각표찾기 } from './src/대시보드.mjs'
-import { 정보, 정보쓰기, 정보지우기, 새이름, 검사, 못하는것,
+import { 정보, 정보쓰기, 정보지우기, 검사, 못하는것, 꼬리겹침, 이름꼴,
   분야들, 언어들, 제휴들 } from './src/계정.mjs'
 import { extname, join, basename } from 'node:path'
 import { createReadStream } from 'node:fs'
@@ -42,13 +42,13 @@ const 있나 = (p) => access(p).then(() => true, () => false)
 const 열쇠파일 = (계정) => (계정 ? `.env.${계정}` : '.env.local')
 const 말투파일 = (계정) => (계정 ? `persona.${계정}.json` : 'persona.json')
 
-// 계정 이름은 SubID 에 들어간다. 영문·숫자만, 8자까지 (src/coupang.mjs 와 같은 제약)
-const 계정꼴 = /^[0-9A-Za-z_-]{1,8}$/
+// 계정 이름은 실제 스레드 아이디다 (src/계정.mjs 와 같은 규칙)
+const 계정꼴 = 이름꼴
 
 async function 계정목록() {
   const 파일들 = await readdir('.').catch(() => [])
   const 딴것 = 파일들
-    .map((f) => f.match(/^\.env\.([0-9A-Za-z_-]{1,8})$/)?.[1])
+    .map((f) => f.match(/^\.env\.([a-z0-9._]{1,30})$/)?.[1])
     // .env.local 은 첫 계정 그 자체다. .env.example 은 서식이다. 둘 다 계정이 아니다
     .filter((v) => v && v !== 'example' && v !== 'local')
   return ['', ...new Set(딴것)]
@@ -113,8 +113,11 @@ async function 말투저장(계정, 받은것) {
 // 계정마다 달라야 하는 건 '누가 어떻게 말하는가' 지 레시피 생김새가 아니다
 async function 계정만들기(받은것) {
   const 값 = 검사(받은것)
-  const 이름 = await 새이름()
+  const 이름 = 값.계정
   if (await 있나(열쇠파일(이름))) throw new Error(`"${이름}" 계정이 이미 있습니다`)
+  // 꼬리표 머리가 겹치면 어느 계정이 벌었는지 못 가른다
+  const 겹친것 = await 꼬리겹침(이름)
+  if (겹친것) throw new Error(`"${겹친것}" 계정과 쿠팡 꼬리표가 겹칩니다. 앞 8글자를 다르게 해 주세요`)
 
   const 서식 = await readFile('.env.example', 'utf8').catch(() =>
     열쇠들.map(([n]) => `${n}=`).join('\n') + '\n')

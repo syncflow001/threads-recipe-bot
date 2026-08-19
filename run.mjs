@@ -3,7 +3,7 @@
 import { 검색, 상세채우기 } from './src/threads.mjs'
 import { 줄세우기 } from './src/score.mjs'
 import { 내려받기, 안쓴것만, 썼다표시 } from './src/media.mjs'
-import { 정보, 미디어뿌리, 분야들, 못하는것 } from './src/계정.mjs'
+import { 정보, 미디어뿌리, 분야들, 못하는것, 꼬리머리 } from './src/계정.mjs'
 import { 재구성, 레시피있나, 링크넣기, 비밀재료막힘 } from './src/compose.mjs'
 import { 레시피링크 } from './src/coupang.mjs'
 import { 글올리기 } from './src/publish.mjs'
@@ -45,7 +45,7 @@ if (막힌것.length) {
   for (const m of 막힌것) console.error(`   - ${m}`)
   process.exit(1)
 }
-const 꼬리표머리 = 프로필 ? 프로필.slice(0, 8) : 't'
+const 꼬리표머리 = 꼬리머리(프로필) // 점·긴 이름은 SubID 에 못 들어간다. 줄여서 쓴다
 
 const 모음 = new Map()
 for (const kw of 키워드들) {

@@ -347,6 +347,22 @@ import { 실적 } from './src/coupang.mjs'
 await assert.rejects(() => 실적('2026-08-01', '20260819'), /YYYYMMDD/)
 await assert.rejects(() => 실적('20260801', '8/19'), /YYYYMMDD/)
 
+// 계정 이름은 실제 스레드 아이디를 쓴다. 쿠팡 꼬리표만 따로 줄인다
+import { 꼬리머리, 이름꼴, 검사, 미디어뿌리 } from './src/계정.mjs'
+assert.equal(꼬리머리(''), 't', '첫 계정은 지금까지 쓰던 t 그대로다')
+assert.equal(꼬리머리('altteul.cart'), 'altteulc', '점을 빼고 8자로 줄인다')
+assert.equal(꼬리머리('my_food_life'), 'myfoodli', '밑줄도 뺀다')
+assert.ok(/^[0-9A-Za-z_-]+$/.test(꼬리머리('altteul.cart')), 'SubID 에 쓸 수 있는 문자만 남는다')
+assert.ok(이름꼴.test('altteul.cart') && !이름꼴.test('Altteul') && !이름꼴.test('한글'),
+  '스레드 아이디 규칙 — 소문자·숫자·점·밑줄')
+assert.equal(미디어뿌리(''), 'media', '첫 계정은 예전 폴더를 그대로 쓴다')
+assert.equal(미디어뿌리('altteul.cart'), 'media/altteul.cart', '나머지는 계정 폴더로 나뉜다')
+assert.throws(() => 검사({ 계정: '', 분야: '요리', 언어: '한국어', 제휴: '쿠팡파트너스' }), /계정 이름/)
+assert.equal(검사({ 계정: 'ABC.d', 분야: '요리', 언어: '한국어', 제휴: '쿠팡파트너스' }).계정, 'abc.d',
+  '대문자는 소문자로 바꾼다')
+assert.equal(검사({ 계정: 'abc', 분야: '요리', 언어: '한국어', 제휴: '쿠팡파트너스' }).별칭, 'abc',
+  '별칭을 비우면 계정 이름을 쓴다')
+
 // 계정을 여럿 굴릴 때 어느 계정이 벌었는지 갈라야 한다
 assert.equal(꼬리표('DcM3fQ4jd3G'), 'tDcM3fQ4jd3G', '계정을 안 주면 지금까지 쓰던 t 그대로다')
 assert.equal(꼬리표('DcM3fQ4jd3G', 'b'), 'bDcM3fQ4jd3G', '계정 머리글자가 앞에 붙는다')
@@ -381,7 +397,7 @@ const 섞인것 = 줄세우기([
 assert.deepEqual(섞인것.map((p) => p.등급), ['플래티넘', '골드', '실버', '브론즈', '미달'],
   '비율이 아무리 높아도 미달은 맨 뒤다')
 
-console.log('통과 — 재구성 검사 59개')
+console.log('통과 — 재구성 검사 69개')
 
 
 // --- 발행 ---

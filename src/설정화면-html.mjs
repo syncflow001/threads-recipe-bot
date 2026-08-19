@@ -87,14 +87,16 @@ export const 화면 = `<!doctype html>
 
 <main id="새계정판" hidden><section>
   <h2>새 계정 만들기</h2>
-  <p class="귀띔">이게 어떤 계정인지 알려 주세요. 파일 이름은 저희가 알아서 만듭니다.</p>
-  <label>1. 별칭 <span style="font-weight:400;color:var(--옅은글)">— 화면에 보일 이름입니다</span></label>
+  <p class="귀띔">이게 어떤 계정인지 알려 주세요.</p>
+  <label>1. 스레드 계정 이름 <span style="font-weight:400;color:var(--옅은글)">— @ 뒤의 영문입니다</span></label>
+  <input id="ㄴ계정" maxlength="30" placeholder="altteul.cart" autocapitalize="off" autocomplete="off">
+  <label>2. 별칭 <span style="font-weight:400;color:var(--옅은글)">— 화면에 보일 이름. 비우면 계정 이름을 씁니다</span></label>
   <input id="ㄴ별칭" maxlength="20" placeholder="알뜰카트">
-  <label>2. 스레드 User ID <span style="font-weight:400;color:var(--옅은글)">— 숫자입니다. 나중에 넣어도 됩니다</span></label>
+  <label>3. 스레드 User ID <span style="font-weight:400;color:var(--옅은글)">— 숫자입니다. 나중에 넣어도 됩니다</span></label>
   <input id="ㄴuserId" placeholder="17841400000000000">
-  <label>3. 계정 분야</label><select id="ㄴ분야"></select>
-  <label>4. 사용 언어</label><select id="ㄴ언어"></select>
-  <label>5. 제휴 마케팅</label><select id="ㄴ제휴"></select>
+  <label>4. 계정 분야</label><select id="ㄴ분야"></select>
+  <label>5. 사용 언어</label><select id="ㄴ언어"></select>
+  <label>6. 제휴 마케팅</label><select id="ㄴ제휴"></select>
   <div id="ㄴ못함"></div>
   <div class="줄">
     <button id="ㄴ저장">이 계정 만들기</button>
@@ -338,8 +340,8 @@ $('계정추가단추').onclick = () => {
   고르기채우기('ㄴ분야', g.분야, '요리')
   고르기채우기('ㄴ언어', g.언어, '한국어')
   고르기채우기('ㄴ제휴', g.제휴, '쿠팡파트너스')
-  $('ㄴ별칭').value = ''; $('ㄴuserId').value = ''
-  못함그리기(); 판보이기('추가'); $('ㄴ별칭').focus()
+  $('ㄴ계정').value = ''; $('ㄴ별칭').value = ''; $('ㄴuserId').value = ''
+  못함그리기(); 판보이기('추가'); $('ㄴ계정').focus()
 }
 ;['ㄴ분야', 'ㄴ언어', 'ㄴ제휴'].forEach((id) => { $(id).onchange = 못함그리기 })
 $('ㄴ취소').onclick = () => 판보이기(null)
@@ -348,7 +350,7 @@ $('ㄴ저장').onclick = async (e) => {
   e.target.disabled = true
   try {
     const s = await 부르기('/account', {
-      별칭: $('ㄴ별칭').value, userId: $('ㄴuserId').value,
+      계정: $('ㄴ계정').value, 별칭: $('ㄴ별칭').value, userId: $('ㄴuserId').value,
       분야: $('ㄴ분야').value, 언어: $('ㄴ언어').value, 제휴: $('ㄴ제휴').value,
     })
     판보이기(null)
