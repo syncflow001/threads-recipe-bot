@@ -342,6 +342,11 @@ assert.deepEqual(수량대조('킥소스 1티스푼', '킥소스 1t (작은술)'
 assert.deepEqual(수량대조('설탕 2큰술', '설탕 2t (작은술)').빠짐, ['2T'],
   '큰술을 작은술로 바꾸면 3배 차이다. 반드시 잡아야 한다')
 
+// 실적 조회 — 날짜 꼴이 틀리면 부르기 전에 막는다 (엉뚱한 기간을 조용히 받아오면 더 나쁘다)
+import { 실적 } from './src/coupang.mjs'
+await assert.rejects(() => 실적('2026-08-01', '20260819'), /YYYYMMDD/)
+await assert.rejects(() => 실적('20260801', '8/19'), /YYYYMMDD/)
+
 // 계정을 여럿 굴릴 때 어느 계정이 벌었는지 갈라야 한다
 assert.equal(꼬리표('DcM3fQ4jd3G'), 'tDcM3fQ4jd3G', '계정을 안 주면 지금까지 쓰던 t 그대로다')
 assert.equal(꼬리표('DcM3fQ4jd3G', 'b'), 'bDcM3fQ4jd3G', '계정 머리글자가 앞에 붙는다')
@@ -376,7 +381,7 @@ const 섞인것 = 줄세우기([
 assert.deepEqual(섞인것.map((p) => p.등급), ['플래티넘', '골드', '실버', '브론즈', '미달'],
   '비율이 아무리 높아도 미달은 맨 뒤다')
 
-console.log('통과 — 재구성 검사 57개')
+console.log('통과 — 재구성 검사 59개')
 
 
 // --- 발행 ---

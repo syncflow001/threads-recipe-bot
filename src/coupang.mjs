@@ -41,6 +41,24 @@ export function 꼬리표(code, 머리 = 't') {
   return id
 }
 
+// 날짜별·SubID별 실적. 우리 꼬리표(t·b + 글번호)가 그대로 들어 있어
+// 어느 계정이, 어느 글이 벌었는지까지 갈린다 (docs/coupang-api-facts.md §12-2).
+// clicks·orders 엔드포인트는 안 쓴다 — commission 하나에 클릭·주문·수수료가 다 있다.
+export async function 실적(시작, 끝, opts = {}) {
+  const 날짜꼴 = /^\d{8}$/
+  if (!날짜꼴.test(시작) || !날짜꼴.test(끝)) throw new Error('날짜는 YYYYMMDD 여야 한다')
+  const data = await 부르기('GET', `${기본}/v1/reports/commission?startDate=${시작}&endDate=${끝}`, null, opts)
+  return (data ?? []).map((d) => ({
+    날짜: String(d.date).replace(/^(\d{4})(\d{2})(\d{2})$/, '$1-$2-$3'),
+    꼬리표: d.subId ?? '',
+    수수료: Number(d.commission) || 0,
+    거래액: Number(d.gmv) || 0,
+    클릭: Number(d.click) || 0,
+    주문: Number(d.order) || 0,
+    취소: Number(d.cancel) || 0,
+  }))
+}
+
 export async function 상품검색(키워드, { 개수 = 5, ...opts } = {}) {
   const path = `${기본}/products/search?keyword=${encodeURIComponent(키워드)}&limit=${개수}`
   const data = await 부르기('GET', path, null, opts)

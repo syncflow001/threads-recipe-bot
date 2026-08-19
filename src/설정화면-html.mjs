@@ -2,70 +2,116 @@
 export const 화면 = `<!doctype html>
 <html lang="ko"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>스레드 자동화 설정</title>
+<title>스레드 자동화</title>
 <style>
   :root{
     --바탕:#faf7f2; --판:#fff; --글:#231f1c; --옅은글:#7a716a;
-    --선:#e6ded3; --강조:#c2410c; --좋음:#15803d; --나쁨:#b91c1c;
+    --선:#e6ded3; --강조:#c2410c; --좋음:#15803d; --나쁨:#b91c1c; --회색:#c4bdb4;
   }
   *{box-sizing:border-box}
   body{margin:0;background:var(--바탕);color:var(--글);
-    font:16px/1.65 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",sans-serif}
-  header{padding:2.5rem 1.5rem 1rem;max-width:820px;margin:0 auto}
-  h1{margin:0;font-size:1.6rem;letter-spacing:-.02em}
-  header p{margin:.4rem 0 0;color:var(--옅은글);font-size:.92rem}
-  main{max-width:820px;margin:0 auto;padding:0 1.5rem 5rem}
+    font:16px/1.6 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",sans-serif}
+  header{padding:2rem 1.5rem .5rem;max-width:880px;margin:0 auto;
+    display:flex;justify-content:space-between;align-items:flex-end;gap:1rem;flex-wrap:wrap}
+  h1{margin:0;font-size:1.45rem;letter-spacing:-.02em}
+  header select{width:auto;min-width:11rem}
+  main{max-width:880px;margin:0 auto;padding:0 1.5rem 5rem}
   section{background:var(--판);border:1px solid var(--선);border-radius:14px;
-    padding:1.5rem;margin-top:1.25rem}
-  h2{margin:0 0 .35rem;font-size:1.05rem;letter-spacing:-.01em}
-  .귀띔{color:var(--옅은글);font-size:.86rem;margin:0 0 1.1rem}
-  label{display:block;font-size:.86rem;font-weight:600;margin:.9rem 0 .3rem}
-  input,textarea,select{width:100%;padding:.6rem .7rem;border:1px solid var(--선);
-    border-radius:9px;font:inherit;font-size:.93rem;background:#fffdfa;color:var(--글)}
-  textarea{resize:vertical;min-height:4.5rem}
+    padding:1.4rem;margin-top:1.1rem}
+  h2{margin:0 0 .3rem;font-size:1.02rem;letter-spacing:-.01em}
+  .귀띔{color:var(--옅은글);font-size:.84rem;margin:0 0 1rem}
+  summary{cursor:pointer;font-size:1.02rem;font-weight:700;letter-spacing:-.01em;
+    list-style:none;display:flex;align-items:center;gap:.5rem}
+  summary::-webkit-details-marker{display:none}
+  summary::before{content:'▸';color:var(--옅은글);transition:transform .15s}
+  details[open]>summary::before{transform:rotate(90deg)}
+  details[open]>summary{margin-bottom:.9rem}
+  label{display:block;font-size:.85rem;font-weight:600;margin:.85rem 0 .3rem}
+  input,textarea,select{width:100%;padding:.55rem .7rem;border:1px solid var(--선);
+    border-radius:9px;font:inherit;font-size:.92rem;background:#fffdfa;color:var(--글)}
+  textarea{resize:vertical;min-height:4.2rem}
   input:focus,textarea:focus,select:focus{outline:2px solid var(--강조);outline-offset:1px;border-color:transparent}
-  button{font:inherit;font-weight:600;font-size:.9rem;padding:.55rem 1rem;border-radius:9px;
+  button{font:inherit;font-weight:600;font-size:.89rem;padding:.5rem 1rem;border-radius:9px;
     border:1px solid var(--글);background:var(--글);color:#fff;cursor:pointer}
   button.연한{background:transparent;color:var(--글)}
   button.위험{background:var(--강조);border-color:var(--강조)}
   button:disabled{opacity:.4;cursor:not-allowed}
-  .줄{display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;margin-top:1.1rem}
-  table{width:100%;border-collapse:collapse;font-size:.9rem}
-  td{padding:.42rem 0;border-bottom:1px solid var(--선);vertical-align:top}
-  td:first-child{width:1.6rem}
-  td.이름{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.83rem;white-space:nowrap;padding-right:.8rem}
-  td.설명{color:var(--옅은글)}
+  .줄{display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;margin-top:1rem}
+  table{width:100%;border-collapse:collapse;font-size:.88rem}
+  td,th{padding:.45rem .5rem;border-bottom:1px solid var(--선);vertical-align:top;text-align:left}
+  th{font-size:.78rem;color:var(--옅은글);font-weight:600}
+  .이름{font-family:ui-monospace,Menlo,monospace;font-size:.81rem;white-space:nowrap}
   .좋음{color:var(--좋음)} .나쁨{color:var(--나쁨)}
   pre{background:#1c1917;color:#e7e5e4;padding:1rem;border-radius:10px;overflow:auto;
-    max-height:26rem;font-size:.8rem;line-height:1.5;white-space:pre-wrap;word-break:break-all}
-  .알림{margin-top:.9rem;font-size:.88rem;font-weight:600;min-height:1.2rem}
-  .경고{background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:.8rem 1rem;
-    font-size:.85rem;color:#7c2d12;margin-top:1rem}
+    max-height:24rem;font-size:.79rem;line-height:1.5;white-space:pre-wrap;word-break:break-all}
+  .알림{margin-top:.8rem;font-size:.86rem;font-weight:600;min-height:1.1rem}
+  .경고{background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:.75rem .9rem;
+    font-size:.83rem;color:#7c2d12;margin-top:.9rem}
+  .숫자줄{display:flex;gap:2rem;flex-wrap:wrap;margin:.2rem 0 1.2rem}
+  .숫자 b{display:block;font-size:1.7rem;letter-spacing:-.03em;line-height:1.15}
+  .숫자 span{font-size:.78rem;color:var(--옅은글)}
+  .막대{display:flex;align-items:flex-end;gap:3px;height:72px;border-bottom:1px solid var(--선);padding-bottom:2px}
+  .막대 i{flex:1;background:var(--강조);border-radius:3px 3px 0 0;min-height:2px;opacity:.85}
+  .막대 i.빔{background:var(--선)}
+  .막대 i.깎임{background:var(--나쁨)}
+  .막대날짜{display:flex;gap:3px;font-size:.62rem;color:var(--옅은글);margin-top:.3rem}
+  .막대날짜 span{flex:1;text-align:center}
+  .격자{border-collapse:separate;border-spacing:0 .1rem}
+  .격자 td{border:none;padding:.3rem .5rem}
+  .날{white-space:nowrap;color:var(--옅은글);font-size:.8rem}
+  .동그라미{font-size:1.15rem;line-height:1}
+  .ㄱ올림{color:var(--좋음)} .ㄱ못올림{color:var(--회색)}
+  .ㄱ기록없음,.ㄱ아직{color:var(--선)}
+  .뜻{display:flex;gap:1.1rem;flex-wrap:wrap;font-size:.78rem;color:var(--옅은글);margin-top:.9rem}
+  .사진{width:56px;height:56px;object-fit:cover;border-radius:8px;background:var(--선);display:block}
+  .사진없음{width:56px;height:56px;border-radius:8px;background:var(--선);display:grid;
+    place-items:center;font-size:1.1rem;color:var(--옅은글)}
+  .본문칸{max-width:22rem;font-size:.84rem;line-height:1.5}
+  a{color:var(--강조)}
 </style></head><body>
 <header>
-  <h1>스레드 자동화 설정</h1>
-  <p>이 화면은 내 컴퓨터에서만 열립니다. 넣은 열쇠는 이 컴퓨터를 벗어나지 않습니다.</p>
+  <h1>스레드 자동화</h1>
+  <select id="계정"></select>
 </header>
 <main>
 
 <section>
-  <h2>계정</h2>
-  <p class="귀띔">여러 계정을 굴린다면 여기서 고릅니다.</p>
-  <select id="계정"></select>
+  <h2>수익</h2>
+  <p class="귀띔">쿠팡파트너스 실적입니다. 5분마다 새로 받아옵니다.</p>
+  <div class="숫자줄" id="수익숫자"></div>
+  <div class="막대" id="막대"></div>
+  <div class="막대날짜" id="막대날짜"></div>
+  <div id="수익알림"></div>
 </section>
 
 <section>
-  <h2>1. 열쇠</h2>
-  <p class="귀띔">채워진 것은 값을 보여 주지 않습니다. 바꾸려면 새 값을 넣고 저장하세요.
-    빈 칸으로 두면 그대로 둡니다.</p>
+  <h2>발행 현황</h2>
+  <p class="귀띔">예정된 시각마다 한 편씩 올라갑니다. 최근 7일입니다.</p>
+  <table class="격자"><tbody id="격자"></tbody></table>
+  <div class="뜻">
+    <span class="ㄱ올림">● 올림</span>
+    <span class="ㄱ못올림">◌ 돌았지만 못 올림</span>
+    <span>○ 발행 전 · 기록 없음</span>
+  </div>
+</section>
+
+<section><details>
+  <summary>최근 올린 글</summary>
+  <table><thead><tr><th></th><th>본문</th><th>쿠팡 상품</th><th>시각</th></tr></thead>
+  <tbody id="글목록"></tbody></table>
+</details></section>
+
+<section><details>
+  <summary>열쇠</summary>
+  <p class="귀띔">채워진 것은 값을 보여 주지 않습니다. 바꿀 때만 새로 넣으세요.</p>
   <table id="열쇠표"></table>
   <div id="열쇠칸"></div>
   <div class="줄"><button id="열쇠저장">열쇠 저장</button></div>
   <div class="알림" id="열쇠알림"></div>
-</section>
+</details></section>
 
-<section>
-  <h2>2. 말투</h2>
+<section><details>
+  <summary>말투</summary>
   <p class="귀띔"><b>내 글 예시가 제일 강력합니다.</b> 반응 좋았던 글을 그대로 붙여넣으세요.</p>
   <label>나를 한 줄로</label><input id="정체성" placeholder="30대 직장인. 퇴근하고 해먹는 집밥 계정">
   <label>말투</label><textarea id="말투" placeholder="친한 친구한테 얘기하듯 반말. 마침표를 거의 안 쓴다"></textarea>
@@ -75,11 +121,10 @@ export const 화면 = `<!doctype html>
   <label>내 글 예시 ③</label><textarea id="예시2"></textarea>
   <div class="줄"><button id="말투저장">말투 저장</button></div>
   <div class="알림" id="말투알림"></div>
-</section>
+</details></section>
 
-<section>
-  <h2>3. 돌려 보기</h2>
-  <p class="귀띔">검색어는 여러 개 넣는 게 좋습니다.</p>
+<section><details>
+  <summary>지금 돌려 보기</summary>
   <label>검색어</label><input id="키워드" value="레시피 요리 한식">
   <div class="줄">
     <button class="연한" data-단계="보기">보기만 — 아무것도 안 올림</button>
@@ -87,29 +132,94 @@ export const 화면 = `<!doctype html>
     <button class="위험" data-단계="발행">실제로 올리기</button>
     <button class="연한" id="멈추기" disabled>멈추기</button>
   </div>
-  <div class="경고">가운데 <b>실제로 올리기</b>만 계정에 글이 올라갑니다. 나머지 둘은 안전합니다.</div>
+  <div class="경고"><b>실제로 올리기</b>만 계정에 글이 올라갑니다. 나머지 둘은 안전합니다.</div>
   <pre id="기록">아직 돌린 것이 없습니다.</pre>
-</section>
+</details></section>
 
 </main>
 <script>
 const $ = (id) => document.getElementById(id)
 const 계정 = () => $('계정').value
-const 주소 = (길) => 길 + '?profile=' + encodeURIComponent(계정())
 const 부르기 = async (길, 몸통) => {
-  const r = await fetch(주소(길), 몸통 ? {
+  const r = await fetch(길 + '?profile=' + encodeURIComponent(계정()), 몸통 ? {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(몸통),
   } : {})
   const j = await r.json()
   if (!r.ok) throw new Error(j.안됨 || '실패했습니다')
   return j
 }
+const 안전 = (s) => String(s ?? '').replace(/[&<>"]/g, (c) =>
+  ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
+const 돈 = (n) => '\\u20a9' + Math.round(n).toLocaleString('ko-KR')
+
+async function 수익그리기() {
+  const r = await 부르기('/revenue')
+  $('수익숫자').innerHTML =
+    '<div class="숫자"><b>' + 돈(r.오늘) + '</b><span>오늘</span></div>' +
+    '<div class="숫자"><b>' + 돈(r.이번달) + '</b><span>이번 달</span></div>' +
+    '<div class="숫자"><b>' + r.클릭.toLocaleString('ko-KR') + '</b><span>이번 달 클릭</span></div>' +
+    '<div class="숫자"><b>' + r.주문.toLocaleString('ko-KR') + '</b><span>이번 달 주문</span></div>'
+  const 최대 = Math.max(1, ...r.최근.map((d) => Math.abs(d.수수료)))
+  $('막대').innerHTML = r.최근.map((d) =>
+    '<i class="' + (d.수수료 < 0 ? '깎임' : d.수수료 ? '' : '빔') + '" title="' +
+    d.날짜 + '  ' + 돈(d.수수료) + '" style="height:' +
+    Math.max(2, (Math.abs(d.수수료) / 최대) * 70) + 'px"></i>').join('')
+  $('막대날짜').innerHTML = r.최근.map((d, i) =>
+    '<span>' + (i % 3 === 0 ? d.날짜.slice(5).replace('-', '/') : '') + '</span>').join('')
+  $('수익알림').innerHTML = r.안됨
+    ? '<div class="경고">쿠팡 실적을 못 받았습니다 — ' + 안전(r.안됨) + '</div>'
+    : (r.계정별가능 ? '' :
+      '<div class="경고">쿠팡이 꼬리표(SubID)를 빈 값으로 돌려줘서 <b>계정별로는 아직 안 갈립니다.</b> ' +
+      '위 숫자는 이 쿠팡 계정 전체 실적입니다.</div>')
+}
+
+const 표시 = { 올림: ['\\u25cf', 'ㄱ올림'], 못올림: ['\\u25cc', 'ㄱ못올림'],
+  기록없음: ['\\u25cb', 'ㄱ기록없음'], 아직: ['\\u25cb', 'ㄱ아직'] }
+
+async function 격자그리기() {
+  const g = await 부르기('/schedule')
+  if (!g.시각들.length) {
+    $('격자').innerHTML = '<tr><td class="날">예약된 시각이 없습니다. 자동 발행을 아직 안 켰습니다.</td></tr>'
+    return
+  }
+  const 머리 = '<tr><td></td>' + g.시각들.map((h) =>
+    '<td class="날">' + String(h).padStart(2, '0') + '시</td>').join('') + '</tr>'
+  $('격자').innerHTML = 머리 + g.줄.map((줄) =>
+    '<tr><td class="날">' + 줄.날짜.slice(5).replace('-', '/') + ' (' + 줄.요일 + ')</td>' +
+    줄.칸.map((c) => {
+      const [글자, 반] = 표시[c.상태] || ['\\u25cb', 'ㄱ아직']
+      return '<td><span class="동그라미 ' + 반 + '" title="' +
+        안전(c.상태 + (c.때 ? ' ' + c.때 : '')) + '">' + 글자 + '</span></td>'
+    }).join('') + '</tr>').join('')
+}
+
+async function 글그리기() {
+  const 글들 = await 부르기('/posts')
+  if (!글들.length) { $('글목록').innerHTML = '<tr><td colspan="4">아직 올린 글이 없습니다.</td></tr>'; return }
+  $('글목록').innerHTML = 글들.map((p) => {
+    const 사진 = p.사진
+      // loading="lazy" 를 쓰면 접힌 details 안에서 영영 안 불러온다 (실측). 20장뿐이라 그냥 받는다
+      ? '<img class="사진" alt="" src="/photo?code=' + encodeURIComponent(p.code) +
+        '&file=' + encodeURIComponent(p.사진) + '&profile=' + encodeURIComponent(계정()) + '">'
+      : '<div class="사진없음">\\ud83c\\udfac</div>'
+    const 본문 = 안전(p.본문).replace(/\\n/g, '<br>')
+    const 상품 = p.상품이름
+      ? 안전(p.상품이름) + (p.상품주소
+        ? '<br><a href="' + 안전(p.상품주소) + '" target="_blank" rel="noreferrer">링크 열기 \\u2197</a>' : '')
+      : '<span style="color:var(--옅은글)">없음</span>'
+    const 때 = String(p.올린때 || '').slice(5, 16).replace('T', ' ')
+    const 시각 = p.글주소
+      ? '<a href="' + 안전(p.글주소) + '" target="_blank" rel="noreferrer">' + 때 + ' \\u2197</a>' : 때
+    return '<tr><td>' + 사진 + '</td><td class="본문칸">' + 본문 + '</td><td>' + 상품 +
+      '</td><td class="날">' + 시각 + '</td></tr>'
+  }).join('')
+}
 
 function 그리기(s) {
   $('열쇠표').innerHTML = s.열쇠.map((k) =>
-    '<tr><td class="' + (k.채움 ? '좋음' : k.필수 ? '나쁨' : '') + '">' +
-    (k.채움 ? '✓' : k.필수 ? '✗' : '·') + '</td>' +
-    '<td class="이름">' + k.이름 + '</td><td class="설명">' + k.설명 +
+    '<tr><td style="width:1.6rem" class="' + (k.채움 ? '좋음' : k.필수 ? '나쁨' : '') + '">' +
+    (k.채움 ? '\\u2713' : k.필수 ? '\\u2717' : '\\u00b7') + '</td>' +
+    '<td class="이름">' + k.이름 + '</td><td style="color:var(--옅은글)">' + k.설명 +
     (k.필수 ? '' : ' <i>(선택)</i>') + '</td></tr>').join('')
   $('열쇠칸').innerHTML = s.열쇠.map((k) =>
     '<label>' + k.이름 + (k.채움 ? ' — 이미 채워져 있습니다' : '') + '</label>' +
@@ -129,8 +239,8 @@ async function 새로고침() {
     '<option value="' + c + '"' + (c === 고른것 ? ' selected' : '') + '>' +
     (c || '첫 계정 (기본)') + '</option>').join('')
   그리기(s)
+  격자그리기(); 글그리기(); 수익그리기()
 }
-
 $('계정').onchange = 새로고침
 
 $('열쇠저장').onclick = async (e) => {
@@ -142,7 +252,7 @@ $('열쇠저장').onclick = async (e) => {
     })
     if (!Object.keys(낼것).length) { $('열쇠알림').textContent = '바꿀 값이 없습니다.'; return }
     그리기(await 부르기('/keys', 낼것))
-    $('열쇠알림').textContent = '저장했습니다. ✓'
+    $('열쇠알림').textContent = '저장했습니다. \\u2713'
   } catch (err) { $('열쇠알림').textContent = '실패 — ' + err.message }
   finally { e.target.disabled = false }
 }
@@ -154,15 +264,14 @@ $('말투저장').onclick = async (e) => {
       정체성: $('정체성').value, 말투: $('말투').value, 표현: $('표현').value,
       예시: [0, 1, 2].map((i) => $('예시' + i).value),
     })
-    $('말투알림').textContent = '저장했습니다. 다음 실행부터 반영됩니다. ✓'
+    $('말투알림').textContent = '저장했습니다. 다음 실행부터 반영됩니다. \\u2713'
   } catch (err) { $('말투알림').textContent = '실패 — ' + err.message }
   finally { e.target.disabled = false }
 }
 
 document.querySelectorAll('[data-단계]').forEach((b) => {
   b.onclick = async () => {
-    if (b.dataset.단계 === '발행' &&
-        !confirm('실제로 계정에 글이 올라갑니다. 계속할까요?')) return
+    if (b.dataset.단계 === '발행' && !confirm('실제로 계정에 글이 올라갑니다. 계속할까요?')) return
     try {
       const r = await 부르기('/run', { 단계: b.dataset.단계, 키워드: $('키워드').value })
       if (r.안됨) return alert(r.안됨)
@@ -170,7 +279,6 @@ document.querySelectorAll('[data-단계]').forEach((b) => {
     } catch (err) { alert(err.message) }
   }
 })
-
 $('멈추기').onclick = () => 부르기('/stop', {})
 
 let 보는중 = null
@@ -182,7 +290,7 @@ function 보기시작() {
     $('기록').scrollTop = $('기록').scrollHeight
     $('멈추기').disabled = !r.도는중
     document.querySelectorAll('[data-단계]').forEach((b) => (b.disabled = r.도는중))
-    if (!r.도는중) { clearInterval(보는중); 보는중 = null }
+    if (!r.도는중) { clearInterval(보는중); 보는중 = null; 격자그리기(); 글그리기() }
   }, 1000)
 }
 

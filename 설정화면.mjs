@@ -4,6 +4,9 @@ import { readFile, writeFile, access, readdir } from 'node:fs/promises'
 import { randomBytes } from 'node:crypto'
 import { spawn } from 'node:child_process'
 import { 화면 } from './src/설정화면-html.mjs'
+import { 수익, 발행격자, 최근글 } from './src/대시보드.mjs'
+import { extname, join, basename } from 'node:path'
+import { createReadStream } from 'node:fs'
 
 const 포트 = Number(process.env.PORT || 7788)
 
@@ -173,6 +176,25 @@ const 서버 = createServer(async (req, res) => {
   try {
     if (url.pathname === '/') return 보내기(res, 200, 화면, 'text/html; charset=utf-8')
     if (url.pathname === '/status') return 보내기(res, 200, await 상태(계정))
+    if (url.pathname === '/revenue') return 보내기(res, 200, await 수익())
+    if (url.pathname === '/schedule') return 보내기(res, 200, await 발행격자(계정))
+    if (url.pathname === '/posts') return 보내기(res, 200, await 최근글(계정))
+
+    // 내려받아 둔 사진을 화면에 보여 준다. 폴더 밖으로 새 나가지 않게 이름만 받는다
+    if (url.pathname === '/photo') {
+      const code = basename(url.searchParams.get('code') ?? '')
+      const file = basename(url.searchParams.get('file') ?? '')
+      if (!/^[A-Za-z0-9_-]{1,20}$/.test(code) || !/^[\w.-]{1,40}$/.test(file)) {
+        return 보내기(res, 400, { 안됨: '이름이 이상합니다' })
+      }
+      const 길 = join(process.cwd(), 'media', '쓴것', code, file)
+      if (!(await 있나(길))) return 보내기(res, 404, { 안됨: '없는 사진입니다' })
+      const 종류 = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png',
+        '.webp': 'image/webp', '.gif': 'image/gif' }[extname(file).toLowerCase()]
+      if (!종류) return 보내기(res, 400, { 안됨: '사진이 아닙니다' })
+      res.writeHead(200, { 'Content-Type': 종류, 'Cache-Control': 'private, max-age=3600' })
+      return createReadStream(길).pipe(res)
+    }
     if (url.pathname === '/log') return 보내기(res, 200, { 도는중: !!도는중, 글: 기록.join('') })
 
     if (req.method === 'POST') {
