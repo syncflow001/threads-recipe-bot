@@ -44,6 +44,7 @@ export const 제휴들 = {
 
 const 기본값 = {
   별칭: '첫 계정',
+  // userId 는 사람이 넣지 않는다. 토큰을 넣으면 스레드가 알려 준다 (설정화면.mjs 의 나를알아내기)
   userId: '',
   분야: '요리',
   언어: '한국어',
@@ -99,12 +100,10 @@ export function 검사(값) {
   if (계정 === 'local' || 계정 === 'example') throw new Error(`"${계정}" 은 쓸 수 없는 이름입니다`)
   const 별칭 = String(값.별칭 ?? '').trim()
   if (별칭.length > 20) throw new Error('별칭은 20자까지입니다')
-  const userId = String(값.userId ?? '').trim()
-  if (userId && !/^\d{5,25}$/.test(userId)) throw new Error('스레드 User ID 는 숫자여야 합니다')
   if (!분야들[값.분야]) throw new Error('없는 분야입니다')
   if (!언어들[값.언어]) throw new Error('없는 언어입니다')
   if (!제휴들[값.제휴]) throw new Error('없는 제휴사입니다')
-  return { 계정, 별칭: 별칭 || 계정, userId, 분야: 값.분야, 언어: 값.언어, 제휴: 값.제휴 }
+  return { 계정, 별칭: 별칭 || 계정, 분야: 값.분야, 언어: 값.언어, 제휴: 값.제휴 }
 }
 
 // 아직 코드가 없는 것을 고르면 무엇이 안 되는지 알린다. 조용히 요리 글을 뱉으면 안 된다

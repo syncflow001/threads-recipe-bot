@@ -112,6 +112,25 @@ async function 열쇠저장(계정, 받은것) {
   await writeFile(경로, 원문, { mode: 0o600 })
 }
 
+// 스레드 User ID 는 사람이 알기 어렵다. 토큰만 있으면 스레드가 알려 준다 —
+// 그래서 계정 추가 때 받지 않고 열쇠를 넣는 순간 우리가 채운다
+async function 나를알아내기(계정) {
+  const 원문 = await readFile(열쇠파일(계정), 'utf8').catch(() => '')
+  const 토큰 = 원문.match(/^THREADS_ACCESS_TOKEN=(.+)$/m)?.[1]?.trim().replace(/^["']|["']$/g, '')
+  if (!토큰) return { 없음: '토큰이 아직 없습니다' }
+  try {
+    const r = await fetch(`https://graph.threads.net/v1.0/me?fields=id,username&access_token=${토큰}`)
+    const j = await r.json()
+    if (!r.ok || !j.id) return { 없음: j?.error?.message ?? '토큰이 맞지 않습니다' }
+    await 열쇠저장(계정, { THREADS_USER_ID: j.id })
+    await 정보쓰기(계정, { userId: j.id })
+    // 토큰이 딴 계정 것이면 글이 엉뚱한 데로 올라간다. 반드시 알린다
+    const 어긋남 = 계정 && j.username && j.username !== 계정
+      ? `이 토큰은 "${j.username}" 계정 것입니다. 계정 이름과 다릅니다` : null
+    return { id: j.id, username: j.username, 어긋남 }
+  } catch (e) { return { 없음: e.message } }
+}
+
 async function 말투저장(계정, 받은것) {
   const 경로 = 말투파일(계정)
   const 바탕 = await readFile(경로, 'utf8').catch(() => null)
@@ -271,7 +290,11 @@ const 다루기 = async (req, res) => {
 
     if (req.method === 'POST') {
       const 몸통 = await 몸통읽기(req)
-      if (url.pathname === '/keys') { await 열쇠저장(계정, 몸통); return 보내기(res, 200, await 상태(계정)) }
+      if (url.pathname === '/keys') {
+        await 열쇠저장(계정, 몸통)
+        const 나 = await 나를알아내기(계정) // 토큰이 들어오면 User ID 를 우리가 채운다
+        return 보내기(res, 200, { ...(await 상태(계정)), 나 })
+      }
       if (url.pathname === '/persona') { await 말투저장(계정, 몸통); return 보내기(res, 200, await 상태(계정)) }
       if (url.pathname === '/run') {
         const 키워드 = (몸통.키워드 ?? '').trim().split(/\s+/).filter(Boolean)

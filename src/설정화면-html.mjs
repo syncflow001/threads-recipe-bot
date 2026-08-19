@@ -103,16 +103,15 @@ export const 화면 = `<!doctype html>
 
 <main id="새계정판" hidden><section>
   <h2>새 계정 만들기</h2>
-  <p class="귀띔">이게 어떤 계정인지 알려 주세요.</p>
+  <p class="귀띔">이게 어떤 계정인지 알려 주세요.
+    <b>스레드 User ID 는 안 물어봅니다</b> — 열쇠를 넣으면 저희가 알아냅니다.</p>
   <label>1. 스레드 계정 이름 <span style="font-weight:400;color:var(--옅은글)">— @ 뒤의 영문입니다</span></label>
   <input id="ㄴ계정" maxlength="30" placeholder="altteul.cart" autocapitalize="off" autocomplete="off">
   <label>2. 별칭 <span style="font-weight:400;color:var(--옅은글)">— 화면에 보일 이름. 비우면 계정 이름을 씁니다</span></label>
   <input id="ㄴ별칭" maxlength="20" placeholder="알뜰카트">
-  <label>3. 스레드 User ID <span style="font-weight:400;color:var(--옅은글)">— 숫자입니다. 나중에 넣어도 됩니다</span></label>
-  <input id="ㄴuserId" placeholder="17841400000000000">
-  <label>4. 계정 분야</label><select id="ㄴ분야"></select>
-  <label>5. 사용 언어</label><select id="ㄴ언어"></select>
-  <label>6. 제휴 마케팅</label><select id="ㄴ제휴"></select>
+  <label>3. 계정 분야</label><select id="ㄴ분야"></select>
+  <label>4. 사용 언어</label><select id="ㄴ언어"></select>
+  <label>5. 제휴 마케팅</label><select id="ㄴ제휴"></select>
   <div id="ㄴ못함"></div>
   <div class="줄">
     <button id="ㄴ저장">이 계정 만들기</button>
@@ -169,7 +168,9 @@ export const 화면 = `<!doctype html>
 
 <section><details>
   <summary>열쇠</summary>
-  <p class="귀띔">채워진 것은 값을 보여 주지 않습니다. 바꿀 때만 새로 넣으세요.</p>
+  <p class="귀띔">채워진 것은 값을 보여 주지 않습니다. 바꿀 때만 새로 넣으세요.<br>
+    <b>스레드 User ID 는 안 넣으셔도 됩니다.</b> 토큰을 저장하면 저희가 알아내 채웁니다.</p>
+  <div id="나정보"></div>
   <table id="열쇠표"></table>
   <div id="열쇠칸"></div>
   <div class="줄"><button id="열쇠저장">열쇠 저장</button></div>
@@ -314,6 +315,10 @@ function 그리기(s) {
     '<label>' + k.이름 + (k.채움 ? ' — 이미 채워져 있습니다' : '') + '</label>' +
     '<input type="password" autocomplete="off" data-열쇠="' + k.이름 + '" placeholder="' +
     (k.채움 ? '바꿀 때만 넣으세요' : '값을 붙여넣으세요') + '">').join('')
+  const uid = s.정보?.userId
+  $('나정보').innerHTML = uid
+    ? '<div class="경고" style="background:#f0fdf4;border-color:#bbf7d0;color:#14532d">' +
+      '스레드 User ID <b>' + 안전(uid) + '</b> 가 들어 있습니다.</div>' : ''
   const m = s.말투 || {}
   $('정체성').value = m.정체성 || ''
   $('말투').value = m.말투 || ''
@@ -372,7 +377,7 @@ $('계정추가단추').onclick = () => {
   고르기채우기('ㄴ분야', g.분야, '요리')
   고르기채우기('ㄴ언어', g.언어, '한국어')
   고르기채우기('ㄴ제휴', g.제휴, '쿠팡파트너스')
-  $('ㄴ계정').value = ''; $('ㄴ별칭').value = ''; $('ㄴuserId').value = ''
+  $('ㄴ계정').value = ''; $('ㄴ별칭').value = ''
   못함그리기(); 판보이기('추가'); $('ㄴ계정').focus()
 }
 ;['ㄴ분야', 'ㄴ언어', 'ㄴ제휴'].forEach((id) => { $(id).onchange = 못함그리기 })
@@ -382,7 +387,7 @@ $('ㄴ저장').onclick = async (e) => {
   e.target.disabled = true
   try {
     const s = await 부르기('/account', {
-      계정: $('ㄴ계정').value, 별칭: $('ㄴ별칭').value, userId: $('ㄴuserId').value,
+      계정: $('ㄴ계정').value, 별칭: $('ㄴ별칭').value,
       분야: $('ㄴ분야').value, 언어: $('ㄴ언어').value, 제휴: $('ㄴ제휴').value,
     })
     판보이기(null)
