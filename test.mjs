@@ -307,7 +307,29 @@ assert.ok(한문단.includes('이게 좋아\nhttps') || 한문단.includes('이�
 // 소개가 비어도 링크는 살아야 한다
 assert.ok(링크넣기(레시피본, [{ 이름: '식빵', url: 'https://x/a' }]).includes('식빵 https://x/a'))
 
-console.log('통과 — 재구성 검사 31개')
+// 같은 링크를 두 줄로 올린다. 합쳐지거나 한 줄이 사라지면 안 된다
+const 두줄 = '👉 식빵 https://link.coupang.com/a'
+const 두줄붙임 = 링크넣기(레시피본, [두줄, 두줄], { 소개: 소개줄 })
+const 링크줄수 = 두줄붙임.split('\n').filter((l) => l.includes('link.coupang.com')).length
+assert.equal(링크줄수, 2, '같은 링크가 두 줄로 들어간다')
+const 두줄조각 = 나누기(두줄붙임).filter((c) => c.includes('link.coupang.com'))
+assert.equal(두줄조각.length, 1, '두 줄이 서로 다른 답글로 갈라지지 않는다')
+assert.equal(두줄조각[0].split('\n').filter((l) => l.includes('link.coupang.com')).length, 2,
+  '나뉜 뒤에도 한 조각 안에 두 줄이 다 있다')
+assert.ok(두줄조각[0].includes(`${소개줄}\n${두줄}\n${두줄}`), '소개 → 링크 → 링크 순서로 붙는다')
+
+// 등급이 높은 것부터 고른다. 플래티넘 > 골드 > 실버 > 브론즈 > 미달
+const 섞인것 = 줄세우기([
+  { 좋아요: 100, 조회수: 20000 },   // 0.5% 브론즈
+  { 좋아요: 500, 조회수: 20000 },   // 2.5% 플래티넘
+  { 좋아요: 900, 조회수: 1000 },    // 90% 이지만 조회 미달
+  { 좋아요: 300, 조회수: 20000 },   // 1.5% 골드
+  { 좋아요: 180, 조회수: 20000 },   // 0.9% 실버
+])
+assert.deepEqual(섞인것.map((p) => p.등급), ['플래티넘', '골드', '실버', '브론즈', '미달'],
+  '비율이 아무리 높아도 미달은 맨 뒤다')
+
+console.log('통과 — 재구성 검사 37개')
 
 
 // --- 발행 ---

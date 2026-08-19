@@ -15,8 +15,10 @@ const 올리기옵션 = process.argv.includes('--발행')
 const 키워드들 = process.argv.slice(2).filter((a) => !a.startsWith('--'))
 if (!키워드들.length) { console.error('사용법. node run.mjs <키워드> [키워드...]'); process.exit(1) }
 const cookie = process.env.THREADS_COOKIE || undefined
-const 상위 = Number(process.env.TOP || 10)
-const 올릴한도 = Number(process.env.LIMIT || Infinity) // 실제로 올릴 편 수. 안 정하면 후보 전부
+// 기본은 "5편 들여다보고 1편만 올린다". 사용자가 정한 값이다.
+// 등급 높은 것부터 고르므로, 5편 중 제일 좋은 하나가 올라간다
+const 상위 = Number(process.env.TOP || 5)
+const 올릴한도 = Number(process.env.LIMIT || 1)
 
 const 모음 = new Map()
 for (const kw of 키워드들) {
@@ -82,7 +84,10 @@ if (재쓰기) {
           const 상품 = await 레시피링크(글.핵심재료, p.code)
           if (상품) {
             글.상품 = 상품
-            글.레시피 = 링크넣기(글.레시피, [`👉 ${상품.이름.slice(0, 30)} ${상품.url}`], { 소개: 글.한줄소개 })
+            // 같은 링크를 두 줄로 올린다. 사용자가 벤치마킹한 계정들이 그렇게 한다 —
+            // 두 줄이면 사람들이 더 잘 누른다. 줄이 하나만 남으면 안 된다
+            const 링크줄 = `👉 ${상품.이름.slice(0, 30)} ${상품.url}`
+            글.레시피 = 링크넣기(글.레시피, [링크줄, 링크줄], { 소개: 글.한줄소개 })
           } else {
             console.error(`  ${p.code} 링크 없음 — "${글.핵심재료}" 에 로켓 상품이 없다`)
           }
