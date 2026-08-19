@@ -74,7 +74,7 @@ node 설정.mjs
 
 | 열쇠 | 없으면 |
 |---|---|
-| `THREADS_COOKIE` | 등급이 `알수없음` 으로 나옵니다. 대신 공유수로 고릅니다 → [넣는 법](docs/사용법.md) §5-1 |
+| `THREADS_COOKIE` | 등급이 `알수없음` 으로 나옵니다. 대신 공유수로 고릅니다 → [넣는 법](docs/사용법.md) 10절 |
 | `COUPANG_ACCESS_KEY`<br>`COUPANG_SECRET_KEY` | 제휴 링크 없이 글만 올라갑니다 |
 | `BLOB_READ_WRITE_TOKEN` | 사진만 올라가고 영상은 빠집니다 |
 
