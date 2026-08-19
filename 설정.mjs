@@ -72,6 +72,15 @@ const 열쇠들 = [
 ]
 
 console.log('1. 열쇠 점검\n')
+
+// 없으면 여기서 만들어 준다. 안 만들면 run.mjs 가 "node: .env.local: not found" 라는
+// 알아먹기 힘든 소리를 내고 죽는다 — 처음 쓰는 사람이 제일 먼저 부딪히는 벽이다
+if (!(await 있나('.env.local')) && (await 있나('.env.example'))) {
+  await writeFile('.env.local', await readFile('.env.example', 'utf8'))
+  console.log('   ✅ .env.local 을 만들었습니다. 아직 비어 있으니 값을 채워 넣으세요.')
+  console.log('      터미널에 이렇게 치면 편집기가 열립니다 →  open -e .env.local\n')
+}
+
 const env = (await 있나('.env.local')) ? await readFile('.env.local', 'utf8') : ''
 if (!env) console.log('   .env.local 파일이 아직 없습니다.\n')
 
@@ -176,7 +185,10 @@ await writeFile('persona.json', JSON.stringify(페르소나, null, 2) + '\n')
 console.log(`
 ✅ persona.json 을 만들었습니다.${예시.length ? '' : '\n\n   ⚠️  내 글 예시가 비어 있습니다. 말투가 밋밋하게 나옵니다.\n      나중에라도 persona.json 의 "내 글 예시" 에 실제 글을 넣어 주세요.'}
 
-다음은 이렇게 해보세요. 아무것도 올리지 않고 뭐가 잡히는지만 봅니다.
+${빠진필수.length
+  ? `⚠️  아직 채울 열쇠가 남았습니다 — ${빠진필수.join(', ')}
+   open -e .env.local  로 열어 채운 다음 아래를 실행하세요.`
+  : '다음은 이렇게 해보세요. 아무것도 올리지 않고 뭐가 잡히는지만 봅니다.'}
 
-   node --env-file=.env.local run.mjs 레시피
+   node --env-file=.env.local run.mjs 레시피 요리 한식
 `)

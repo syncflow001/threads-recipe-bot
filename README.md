@@ -47,14 +47,24 @@ npm 으로 설치할 것은 **하나도 없습니다.** 바깥 라이브러리�
 ## 설치
 
 ```bash
-git clone https://github.com/<계정>/threads-recipe-bot.git
+git clone https://github.com/syncflow001/threads-recipe-bot.git
 cd threads-recipe-bot
-cp .env.example .env.local
 node 설정.mjs
 ```
 
-`설정.mjs` 가 **열쇠가 다 있는지 확인해 주고, 말투를 물어봐서 만들어 줍니다.**
-네 가지만 답하면 됩니다.
+`설정.mjs` 가 세 가지를 해 줍니다.
+
+1. **`.env.local` 을 만들어 줍니다.** 열쇠를 적어 넣는 파일입니다 (`.env.example` 을 복사해서)
+2. 어떤 열쇠가 비었는지 ✅ ❌ 로 보여 줍니다
+3. 말투를 네 가지만 물어보고 `persona.json` 을 만들어 줍니다
+
+그다음 열쇠를 채웁니다.
+
+```bash
+open -e .env.local
+```
+
+> `.env.local` 은 **깃에 올라가지 않습니다.** 내 열쇠가 남의 저장소로 새지 않습니다.
 
 ## 열쇠 준비하기
 
