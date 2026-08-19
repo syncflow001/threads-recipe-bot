@@ -307,16 +307,21 @@ assert.ok(한문단.includes('이게 좋아\nhttps') || 한문단.includes('이�
 // 소개가 비어도 링크는 살아야 한다
 assert.ok(링크넣기(레시피본, [{ 이름: '식빵', url: 'https://x/a' }]).includes('식빵 https://x/a'))
 
-// 같은 링크를 두 줄로 올린다. 합쳐지거나 한 줄이 사라지면 안 된다
-const 두줄 = '👉 식빵 https://link.coupang.com/a'
-const 두줄붙임 = 링크넣기(레시피본, [두줄, 두줄], { 소개: 소개줄 })
-const 링크줄수 = 두줄붙임.split('\n').filter((l) => l.includes('link.coupang.com')).length
-assert.equal(링크줄수, 2, '같은 링크가 두 줄로 들어간다')
+// 상품 이름은 한 번, 주소는 두 줄. 합쳐지거나 한 줄이 사라지면 안 된다
+const 상품이름 = '풀무원 국산콩 두부'
+const 주소 = 'https://link.coupang.com/a'
+const 두줄붙임 = 링크넣기(레시피본, [상품이름, 주소, 주소], { 소개: 소개줄 })
+assert.equal(두줄붙임.split('\n').filter((l) => l.includes('link.coupang.com')).length, 2,
+  '주소가 두 줄로 들어간다')
+assert.equal(두줄붙임.split('\n').filter((l) => l.trim() === 상품이름).length, 1,
+  '상품 이름은 한 번만 나온다')
+assert.ok(!/👉/.test(두줄붙임), '상품 이름 앞에 손가락을 붙이지 않는다')
 const 두줄조각 = 나누기(두줄붙임).filter((c) => c.includes('link.coupang.com'))
 assert.equal(두줄조각.length, 1, '두 줄이 서로 다른 답글로 갈라지지 않는다')
 assert.equal(두줄조각[0].split('\n').filter((l) => l.includes('link.coupang.com')).length, 2,
   '나뉜 뒤에도 한 조각 안에 두 줄이 다 있다')
-assert.ok(두줄조각[0].includes(`${소개줄}\n${두줄}\n${두줄}`), '소개 → 링크 → 링크 순서로 붙는다')
+assert.ok(두줄조각[0].includes(`${소개줄}\n${상품이름}\n${주소}\n${주소}`),
+  '소개 → 이름 → 주소 → 주소 순서로 붙는다')
 
 // 등급이 높은 것부터 고른다. 플래티넘 > 골드 > 실버 > 브론즈 > 미달
 const 섞인것 = 줄세우기([
