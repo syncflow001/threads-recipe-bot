@@ -14,18 +14,16 @@
   <key>WorkingDirectory</key>
   <string><여기에_내_폴더_경로></string>
 
-  <!-- 3시간마다 하루 여덟 번. 사용자가 정한 간격이다.
+  <!-- 하루 다섯 번. 사용자가 정한 시각이다 — 08 · 12 · 16 · 20 · 24(=00)시.
+       모든 간격이 4시간 이상이라 서로 도달을 갉아먹지 않는다.
        맥이 자다 깨면 놓친 시각이 몰려 실행되므로, 자동발행.sh 가 150분 간격을 지킨다 -->
   <key>StartCalendarInterval</key>
   <array>
     <dict><key>Hour</key><integer>0</integer><key>Minute</key><integer>0</integer></dict>
-    <dict><key>Hour</key><integer>3</integer><key>Minute</key><integer>0</integer></dict>
-    <dict><key>Hour</key><integer>6</integer><key>Minute</key><integer>0</integer></dict>
-    <dict><key>Hour</key><integer>9</integer><key>Minute</key><integer>0</integer></dict>
+    <dict><key>Hour</key><integer>8</integer><key>Minute</key><integer>0</integer></dict>
     <dict><key>Hour</key><integer>12</integer><key>Minute</key><integer>0</integer></dict>
-    <dict><key>Hour</key><integer>15</integer><key>Minute</key><integer>0</integer></dict>
-    <dict><key>Hour</key><integer>18</integer><key>Minute</key><integer>0</integer></dict>
-    <dict><key>Hour</key><integer>21</integer><key>Minute</key><integer>0</integer></dict>
+    <dict><key>Hour</key><integer>16</integer><key>Minute</key><integer>0</integer></dict>
+    <dict><key>Hour</key><integer>20</integer><key>Minute</key><integer>0</integer></dict>
   </array>
 
   <!-- 맥이 잠들어 시각을 놓쳤으면 깨어난 뒤 한 번 돌린다 -->
