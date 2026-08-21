@@ -40,11 +40,26 @@ assert.equal(게시물뽑기('<html></html>').length, 0, '빈 문서는 빈 목�
 // --- 등급 ---
 assert.equal(등급({ 조회수: null, 좋아요: 10 }), null, '조회수를 모르면 등급을 지어내지 않는다')
 assert.equal(등급({ 조회수: 0, 좋아요: 10 }), null, '0 으로 나누지 않는다')
-assert.equal(등급({ 조회수: 4999, 좋아요: 4999 }).등급, '미달', '문턱 아래는 비율이 100% 라도 미달이다')
+assert.equal(등급({ 조회수: 1999, 좋아요: 1999 }).등급, '미달', '문턱 아래는 비율이 100% 라도 미달이다')
+
+// 확산이 1차 지표다 — 팔로워를 알면 조회수÷팔로워 로 매긴다
+assert.equal(등급({ 조회수: 10000, 좋아요: 1, 팔로워: 400 }).등급, '플래티넘', '25배')
+assert.equal(등급({ 조회수: 10000, 좋아요: 1, 팔로워: 800 }).등급, '골드', '12.5배')
+assert.equal(등급({ 조회수: 10000, 좋아요: 1, 팔로워: 1600 }).등급, '실버', '6.25배')
+assert.equal(등급({ 조회수: 10000, 좋아요: 1, 팔로워: 4000 }).등급, '브론즈', '2.5배')
+assert.equal(등급({ 조회수: 10000, 좋아요: 1, 팔로워: 9000 }).등급, '미달', '1.1배는 안 퍼진 것이다')
+assert.equal(등급({ 조회수: 10000, 좋아요: 1, 팔로워: 400 }).확산, 25)
+
+// 팔로워가 문턱 아래면 확산을 안 쓴다 — 팔로워 4명짜리가 163배로 1등을 했다 (실측)
+assert.equal(등급({ 조회수: 10000, 좋아요: 200, 팔로워: 4 }).등급, '플래티넘', '확산 2500배가 아니라 비율 2.0% 로 매긴다')
+assert.equal(등급({ 조회수: 10000, 좋아요: 1, 팔로워: 4 }).등급, '브론즈', '비율 0.01% — 확산이 컸어도 브론즈다')
+
+// 팔로워를 모르면 예전 기준(좋아요÷조회수)으로 돌아간다. 검색 경로가 이 길을 탄다
 assert.equal(등급({ 조회수: 10000, 좋아요: 200 }).등급, '플래티넘') // 2.0%
 assert.equal(등급({ 조회수: 10000, 좋아요: 120 }).등급, '골드')     // 1.2%
 assert.equal(등급({ 조회수: 10000, 좋아요: 60 }).등급, '실버')      // 0.6%
 assert.equal(등급({ 조회수: 10000, 좋아요: 59 }).등급, '브론즈')     // 0.59%
+assert.equal(등급({ 조회수: 10000, 좋아요: 59 }).확산, null, '팔로워를 모르면 확산은 null 이다')
 
 // 실측 표본으로 되짚기 — 이 두 개가 뒤집히면 기준이 망가진 것이다
 assert.equal(등급({ 조회수: 66424, 좋아요: 3745 }).등급, '플래티넘', '조회 6.6만·좋아요 3745 는 최상위였다')
@@ -61,7 +76,30 @@ const 정렬 = 줄세우기([
 assert.deepEqual(정렬.map((x) => x.등급), ['플래티넘', '골드', '브론즈', '미달', '알수없음'],
   '문턱 미달과 조회수 모름은 등급 뒤로 밀린다')
 
-console.log('통과 — 검사 %d개', 18)
+// 같은 검색어를 하루 여러 번 두드리면 스레드가 그 단어의 결과를 1개로 줄인다.
+// 목록 전체를 골고루 돌아야 한 단어가 받는 횟수가 준다
+import { 돌려쓰기, 분야들 } from './src/계정.mjs'
+const 요리어 = 분야들.요리.키워드
+const 때 = (시, 날) => new Date(2026, 7, 날, 시)
+assert.deepEqual(돌려쓰기(['가', '나']), ['가', '나'], '둘뿐이면 그대로 둔다')
+assert.equal(돌려쓰기(요리어).length, 요리어.length, '목록을 자르지 않는다')
+
+// 시각표가 0·8·12·16·20 처럼 4의 배수뿐이어도 매번 같은 자리에서 시작하면 안 된다
+const 넷배수시작 = [0, 8, 12, 16, 20].map((시) => 돌려쓰기(요리어, 때(시, 20))[0])
+assert.equal(new Set(넷배수시작).size, 5, `4의 배수 시각마다 다른 검색어로 시작한다 — ${넷배수시작}`)
+
+// 건너뛰는 폭이 목록 길이와 서로소가 아니면 절반만 쓰인다. 스무 개짜리에서 2칸씩 뛰면 열 개만 돈다
+const 하루치 = new Set(Array.from({ length: 24 }, (_, 시) => 돌려쓰기(요리어, 때(시, 20))[0]))
+assert.ok(하루치.size >= 요리어.length - 4, `하루 안에 목록 대부분을 돈다 — ${하루치.size}/${요리어.length}`)
+
+// 쟁여둔언니는 두 시간마다 돈다. 그 열두 시각도 서로 안 겹쳐야 한다
+const 두시간마다 = [1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23].map((시) => 돌려쓰기(요리어, 때(시, 20))[0])
+assert.equal(new Set(두시간마다).size, 12, `두 시간마다 도는 시각도 서로 다른 검색어로 시작한다 — ${두시간마다}`)
+
+// 날짜가 바뀌면 같은 시각이라도 다른 자리에서 시작한다. 어제 안 쓴 단어가 오늘 쓰인다
+assert.notEqual(돌려쓰기(요리어, 때(8, 20))[0], 돌려쓰기(요리어, 때(8, 21))[0], '날짜가 다르면 시작 자리가 밀린다')
+
+console.log('통과 — 검사 %d개', 25)
 
 // --- 미디어 내려받기·중복 방지 ---
 import { mkdtemp, rm, readdir, readFile } from 'node:fs/promises'
@@ -120,7 +158,7 @@ await rm(뿌리, { recursive: true, force: true })
 console.log('통과 — 미디어 검사 12개')
 
 // --- 재구성 ---
-import { 프롬프트만들기, 재구성, 링크넣기, 재료모으기 } from './src/compose.mjs'
+import { 프롬프트만들기, 재구성, 링크넣기, 재료모으기, 도입고르기 } from './src/compose.mjs'
 import { 나누기 } from './src/publish.mjs'
 
 const 페르소나 = {
@@ -377,29 +415,77 @@ assert.throws(() => 꼬리표('DcM3fQ4jd3G', 'a&b'), /쓸 수 없는 문자/,
   '& 가 들어가면 남이 자기 제휴 ID 를 끼워 넣을 수 있다')
 
 // 비밀재료 — 별명만 있고 정체를 모르면 그 글을 쓰지 않는다
-import { 비밀재료막힘 } from './src/compose.mjs'
-const 킥레시피 = '🛒 준비물\n사과 1/2개\n킥소스 1티스푼'
-assert.ok(비밀재료막힘(킥레시피, { 별명: '킥소스', 실제: '' }), '정체를 모르면 막는다')
-assert.equal(비밀재료막힘(킥레시피, { 별명: '킥소스', 실제: '초절임 식초' }), null, '정체를 알면 통과한다')
-// LLM 이 비밀재료를 통째로 놓쳐도 레시피 본문에서 잡아야 한다. 그게 진짜 위험이다
-assert.ok(비밀재료막힘(킥레시피, { 별명: '', 실제: '' }), 'LLM 이 못 알아채도 본문에서 잡는다')
-assert.ok(비밀재료막힘(킥레시피, null), '비밀재료 칸이 아예 없어도 잡는다')
-assert.ok(비밀재료막힘('🛒 준비물\n비법 소스 1스푼', null), '띄어쓴 별명도 잡는다')
-assert.equal(비밀재료막힘('🛒 준비물\n사과 1/2개\n식초 1스푼', null), null,
-  '멀쩡한 재료만 있으면 막지 않는다')
+import { 비밀재료빼기 } from './src/compose.mjs'
+// 정체를 모르는 별명 재료는 그 줄만 빼고 올린다. 원글에서 그것은 준비물이 아니라
+// 작성자의 광고 블록이었고 준비물은 이미 완전했다 (실측)
+{
+  const 킥있는것 = '🍕 **다이어트 피자**\n\n🛒 준비물\n또띠아 1장\n참치 1캔\n🔽다이어터들의 킥소스🔽\n\n👩🏻‍🍳 만드는 법\n1️⃣ 굽기'
+  const 뺀것 = 비밀재료빼기(킥있는것, { 별명: '킥소스', 실제: '' })
+  assert.equal(뺀것.뺀줄.length, 1)
+  assert.match(뺀것.뺀줄[0], /킥소스/)
+  assert.ok(!뺀것.레시피.includes('킥소스'), '별명 줄이 사라진다')
+  assert.ok(뺀것.레시피.includes('또띠아 1장') && 뺀것.레시피.includes('참치 1캔'), '멀쩡한 재료는 남는다')
+  assert.ok(뺀것.레시피.includes('만드는 법'), '순서도 남는다')
+  assert.ok(!/\n\n\n/.test(뺀것.레시피), '빈 줄이 겹치지 않는다 — 문단이 갈리면 링크만 덩그러니 남는다')
+
+  // 정체를 알면 그대로 둔다
+  const 그대로 = 비밀재료빼기(킥있는것, { 별명: '킥소스', 실제: '초절임 식초' })
+  assert.deepEqual(그대로.뺀줄, [])
+  assert.equal(그대로.레시피, 킥있는것)
+
+  // LLM 이 별명을 못 알아채도 본문에서 잡는다
+  assert.equal(비밀재료빼기('🛒 준비물\n비법 소스 1스푼\n사과 1개', null).뺀줄.length, 1, '띄어쓴 별명도 잡는다')
+  assert.equal(비밀재료빼기('🛒 준비물\n사과 1/2개\n식초 1스푼', null).뺀줄.length, 0,
+    '멀쩡한 재료만 있으면 아무것도 안 뺀다')
+  assert.equal(비밀재료빼기('🛒 준비물\n사과 1개', null).레시피, '🛒 준비물\n사과 1개')
+  // 빈 값에도 안 죽는다
+  assert.deepEqual(비밀재료빼기(null, null), { 레시피: '', 뺀줄: [] })
+}
 
 // 등급이 높은 것부터 고른다. 플래티넘 > 골드 > 실버 > 브론즈 > 미달
 const 섞인것 = 줄세우기([
   { 좋아요: 100, 조회수: 20000 },   // 0.5% 브론즈
   { 좋아요: 500, 조회수: 20000 },   // 2.5% 플래티넘
-  { 좋아요: 900, 조회수: 1000 },    // 90% 이지만 조회 미달
+  { 좋아요: 900, 조회수: 1000 },    // 90% 이지만 조회 미달 (문턱 2000)
   { 좋아요: 300, 조회수: 20000 },   // 1.5% 골드
   { 좋아요: 180, 조회수: 20000 },   // 0.9% 실버
 ])
 assert.deepEqual(섞인것.map((p) => p.등급), ['플래티넘', '골드', '실버', '브론즈', '미달'],
   '비율이 아무리 높아도 미달은 맨 뒤다')
 
-console.log('통과 — 재구성 검사 70개')
+// 도입 돌려쓰기 — 훅이 하나로 굳으면 아홉 편 연속 같은 첫 문장이 나간다. 실제로 겪었다
+{
+  const 유형 = ['자신감', '비법', '값되묻기', '권유', '내기억', '계기']
+  // 같은 글은 늘 같은 도입 (다시 돌려도 결과가 안 흔들린다)
+  assert.equal(도입고르기(유형, 'AbC123'), 도입고르기(유형, 'AbC123'))
+  // 글이 다르면 도입이 갈린다 — 한 가지로 쏠리지 않는다
+  const 씨앗 = ['DbiZqXYE0Dc', 'DCbB6vHppNr', 'DVqalhNoAts', 'C8xQwErTyUi', 'DzZaBbCcDdE', 'DqW1eR2tY3u', 'DmN4bV5cX6z', 'DpO7iU8yT9r']
+  const 나온것 = new Set(씨앗.map((c) => 도입고르기(유형, c)))
+  assert.ok(나온것.size >= 3, `도입이 ${나온것.size}가지뿐 — 쏠렸다`)
+  // 유형이 없으면 조용히 비운다. 지시문에 빈 줄이 새면 안 된다
+  assert.equal(도입고르기([], 'x'), '')
+  assert.equal(도입고르기(undefined, 'x'), '')
+  // 지시문에 실제로 실린다
+  const 지시 = 프롬프트만들기({ ...원글, code: 'AbC123' }, { 말투: '반말', '도입 유형': 유형 }).system
+  assert.match(지시, /\[도입\] 첫 줄을 이렇게 연다/)
+  assert.match(지시, /다른 도입 방식을 섞지 않는다/)
+  // 도입 설명을 그대로 베껴 쓴 글이 실제로 나갔다 — "비법 공개 — … (조회 7만)" 이 본문에 실렸다
+  assert.match(지시, /이 설명을 글에 그대로 쓰지 마라/)
+  // 유형 문자열에 라벨이나 괄호 설명이 붙으면 LLM 이 그것까지 옮겨 적는다
+  // 계정마다 말투 파일이 있다. 공개 패키지에는 persona.json 하나뿐이라 있는 것만 본다
+  const { readFile: 말투읽기 } = await import('node:fs/promises')
+  for (const f of ['persona.json', 'persona.jaengyeo.unni.json']) {
+    let 글 = null
+    try { 글 = await 말투읽기(f, 'utf8') } catch { continue }
+    const p = JSON.parse(글)
+    for (const 줄 of p['도입 유형'] ?? []) {
+      assert.ok(!줄.includes('—'), `${f}: 도입 유형에 라벨이 있다 — "${줄}"`)
+      assert.ok(!/[()]/.test(줄), `${f}: 도입 유형에 괄호 설명이 있다 — "${줄}"`)
+    }
+  }
+}
+
+console.log('통과 — 재구성 검사 76개')
 
 
 // --- 발행 ---
@@ -416,9 +502,26 @@ assert.deepEqual(올릴수있는것([남의영상]), { 쓸것: [남의영상], �
 assert.deepEqual(올릴수있는것([메타영상, 메타이미지]).쓸것, [메타이미지], '섞여 있으면 영상만 뺀다')
 assert.deepEqual(올릴수있는것(), { 쓸것: [], 버린영상: 0 })
 
+// 영상을 못 올렸으면 그 표를 남겨야 한다. run.mjs 가 이걸 보고 반쪽짜리 글을 안 올린다.
+// 토큰을 빈 값으로 주면 그물을 타지 않고 바로 실패한다
+import { 영상갈아끼우기 } from './src/blob.mjs'
+const 갈린것 = await 영상갈아끼우기([메타이미지, 메타영상], { 받은폴더: '/없는폴더', code: 'X', 토큰: '' })
+assert.equal(갈린것[0].우리가올림, undefined, '이미지는 손대지 않는다')
+assert.equal(갈린것[1].우리가올림, undefined, '못 올린 영상에는 우리가올림 표가 안 붙는다')
+assert.ok(갈린것[1].올리기실패, '못 올린 까닭을 남긴다')
+
+// 답글 권한이 없으면 본문만 올라가고 레시피가 죽는다. 올리기 전에 잡아야 한다
+import { 빠진권한, 필요권한 } from './src/publish.mjs'
+const 가짜 = (권한들) => async () => ({ json: async () => ({ data: { scopes: 권한들 } }) })
+assert.deepEqual(await 빠진권한('t', 가짜(필요권한)), [], '다 있으면 통과한다')
+assert.deepEqual(await 빠진권한('t', 가짜(['threads_basic', 'threads_content_publish'])),
+  ['threads_manage_replies'], '답글 권한이 없으면 잡아낸다')
+assert.deepEqual(await 빠진권한('t', 가짜([])), [], '못 물어봤으면 막지 않는다 — 그물이 끊겼을 수 있다')
+assert.deepEqual(await 빠진권한('t', async () => { throw new Error('끊김') }), [], '오류가 나도 막지 않는다')
+
 // 스레드 글은 500자까지다. 레시피가 그보다 길면 통째로 거부당한다 (실제로 558자에서 막혔다)
 import { 글자한도 } from './src/publish.mjs'
-assert.equal(글자한도, 450, '한도 500 에 여유를 둔다 — 이모지·링크가 늘어나도 안 걸리게')
+assert.equal(글자한도, 490, '한도 500 에 여유를 둔다. 자바스크립트는 이모지를 여러 자로 세니 실제로는 더 남는다')
 
 // 준비물과 만드는 법은 따로 올라가야 읽는 사람이 재료를 보며 따라 할 수 있다
 const 재료들 = Array.from({ length: 9 }, (_, i) => `재료${i} ${i + 1}스푼`).join('\n')
@@ -435,16 +538,351 @@ assert.deepEqual(나누기('짧다'), ['짧다'], '한도 안이면 한 조각�
 const 문단 = (n) => 'ㄱ'.repeat(n)
 const 둘 = 나누기(`${문단(300)}\n\n${문단(300)}`)
 assert.equal(둘.length, 2, '빈 줄에서 나눈다')
-assert.ok(둘.every((c) => c.length <= 450))
+assert.ok(둘.every((c) => c.length <= 글자한도))
 
 // 재료 목록 한가운데를 자르면 못 읽는다. 빈 줄이 없으면 줄 단위로 자른다
 const 줄들 = Array.from({ length: 30 }, (_, i) => `재료${i} 100g`).join('\n')
 const 여럿 = 나누기(줄들)
-assert.ok(여럿.every((c) => c.length <= 450))
+assert.ok(여럿.every((c) => c.length <= 글자한도))
 assert.ok(여럿.every((c) => !/^\d+g/.test(c)), '줄 중간에서 끊기지 않는다')
 assert.equal(여럿.join('\n'), 줄들, '나눠도 내용은 그대로다')
 
 // 한 줄이 한도를 넘으면 어쩔 수 없이 자른다 — 그래도 한도는 지킨다
-assert.ok(나누기(문단(1200)).every((c) => c.length <= 450))
+assert.ok(나누기(문단(1200)).every((c) => c.length <= 글자한도))
 
-console.log('통과 — 발행 검사 17개')
+// 제목 한 줄만 담긴 채로 끊으면 "🥗 샐러드 드레싱 4종" 만 있는 답글이 나간다 — 실제로 그랬다.
+// 뒤 문단이 한도를 넘어 줄 단위로 쪼개질 때도 앞머리를 혼자 내보내면 안 된다
+const 긴재료 = Array.from({ length: 26 }, (_, i) => `재료${i} 1T (큰술) — 어느 무리`).join('\n')
+const 제목붙은것 = 나누기(`🥗 드레싱 4종\n\n🛒 준비물\n${긴재료}\n\n👩🏻‍🍳 만드는 법\n1️⃣ 섞는다`)
+assert.ok(제목붙은것.every((c) => c.length >= 80), `제목만 있는 조각을 안 만든다 — ${제목붙은것.map((c) => c.length)}`)
+assert.ok(제목붙은것[0].startsWith('🥗 드레싱 4종'), '제목은 첫 조각 맨 앞에 남는다')
+assert.ok(제목붙은것[0].includes('🛒 준비물'), '제목과 준비물이 한 조각에 같이 간다')
+assert.ok(제목붙은것.every((c) => c.length <= 글자한도))
+assert.ok(제목붙은것.join('\n').replace(/\n+/g, '\n').includes('재료25 1T (큰술) — 어느 무리'), '재료가 새지 않는다')
+
+console.log('통과 — 발행 검사 29개')
+
+// 보관함 — 홈에서 건진 글을 쟁여 뒀다가 나중에 꺼내 쓴다
+{
+  const { 담기, 꺼내기, 빼기, 읽기 } = await import('./src/보관함.mjs')
+  const { mkdtemp, rm } = await import('node:fs/promises')
+  const { tmpdir } = await import('node:os')
+  const { join } = await import('node:path')
+  const 방 = await mkdtemp(join(tmpdir(), '보관함-'))
+  const 파일 = join(방, '보관함.json')
+  const 하루 = 24 * 60 * 60 * 1000
+  const 지금 = 1_800_000_000_000
+
+  // 없는 파일은 빈 보관함이다. 없는 것은 고장이 아니다
+  assert.deepEqual(await 읽기(파일), [])
+  assert.deepEqual(await 꺼내기({ 파일 }), [])
+
+  assert.deepEqual(
+    await 담기([{ code: 'a', 등급: '골드', 비율: 0.013 }, { code: 'b', 등급: '미달', 비율: 0.09 }], { 파일, 지금 }),
+    { 새것: 2, 전체: 2 },
+  )
+
+  // 같은 글을 다시 담아도 늘지 않는다. 조회수는 나중에 잰 값이 이긴다
+  assert.deepEqual(await 담기([{ code: 'a', 등급: '플래티넘', 조회수: 999 }], { 파일, 지금: 지금 + 하루 }), { 새것: 0, 전체: 2 })
+  const 갱신됨 = (await 읽기(파일)).find((p) => p.code === 'a')
+  assert.equal(갱신됨.등급, '플래티넘')
+  assert.equal(갱신됨.조회수, 999)
+  assert.equal(갱신됨.건진때, 지금, '건진때는 처음 값을 지킨다')
+  assert.equal(갱신됨.갱신때, 지금 + 하루)
+
+  // 미달은 안 꺼낸다. 좋은 등급이 앞에 온다
+  assert.deepEqual((await 꺼내기({ 파일, 지금 })).map((p) => p.code), ['a'])
+  await 담기([{ code: 'c', 등급: '실버', 비율: 0.007 }], { 파일, 지금 })
+  assert.deepEqual((await 꺼내기({ 파일, 지금 })).map((p) => p.code), ['a', 'c'])
+
+  // 오래된 것은 안 꺼낸다 — 미디어 주소가 하루 반이면 죽는다 (실측)
+  assert.deepEqual(await 꺼내기({ 파일, 지금: 지금 + 15 * 하루 }), [])
+
+  // 쓴 글은 뺀다. 안 빼면 다음에 또 1등으로 올라온다
+  assert.equal(await 빼기(['a'], { 파일 }), 2)
+  assert.deepEqual((await 꺼내기({ 파일, 지금 })).map((p) => p.code), ['c'])
+
+  // code 없는 것은 조용히 건너뛴다
+  assert.deepEqual(await 담기([{ 등급: '골드' }, null], { 파일, 지금 }), { 새것: 0, 전체: 2 })
+  await rm(방, { recursive: true, force: true })
+}
+console.log('통과 — 보관함 검사 14개')
+
+// 알림 — 쿠키가 죽으면 텔레그램으로 부른다. 못 보내도 발행은 계속돼야 한다
+{
+  const { 알리기 } = await import('./src/알림.mjs')
+  const { mkdtemp, rm, readFile } = await import('node:fs/promises')
+  const { tmpdir } = await import('node:os')
+  const { join } = await import('node:path')
+  const 방 = await mkdtemp(join(tmpdir(), '알림-'))
+  const 기록파일 = join(방, '알림기록.json')
+  const 열쇠 = { 토큰: 'T', 방번호: '99', 기록파일 }
+  const 보낸것 = []
+  const 가짜 = (ok = true, 몸 = '{"ok":true}') => async (url, opt) => {
+    보낸것.push({ url, 몸: JSON.parse(opt.body) })
+    return { ok, status: ok ? 200 : 401, text: async () => 몸 }
+  }
+
+  // 열쇠가 없으면 조용히 안 보낸다. 던지지 않는다 — 알림 때문에 발행이 죽으면 안 된다
+  assert.equal((await 알리기('x', { 기록파일 })).보냄, false)
+  assert.match((await 알리기('x', { 기록파일 })).까닭, /열쇠/)
+  assert.equal((await 알리기('  ', { ...열쇠, fetch: 가짜() })).보냄, false, '빈 내용은 안 보낸다')
+
+  // 보낸다
+  const r = await 알리기('쿠키가 죽었다', { ...열쇠, 종류: '쿠키', 지금: 1000, fetch: 가짜() })
+  assert.equal(r.보냄, true)
+  assert.match(보낸것[0].url, /api\.telegram\.org\/botT\/sendMessage/)
+  assert.equal(보낸것[0].몸.chat_id, '99')
+  assert.equal(보낸것[0].몸.text, '쿠키가 죽었다')
+
+  // 같은 종류로 곧바로 또 부르면 안 보낸다. 두 시간마다 울리면 아무도 안 읽는다
+  const 두번째 = await 알리기('또', { ...열쇠, 종류: '쿠키', 지금: 1000 + 60_000, fetch: 가짜() })
+  assert.equal(두번째.보냄, false)
+  assert.equal(보낸것.length, 1, '잠잠시간 안에는 아예 안 부른다')
+
+  // 종류가 다르면 보낸다
+  assert.equal((await 알리기('딴것', { ...열쇠, 종류: '다른일', 지금: 1000 + 60_000, fetch: 가짜() })).보냄, true)
+  // 잠잠시간이 지나면 다시 보낸다
+  assert.equal((await 알리기('또', { ...열쇠, 종류: '쿠키', 지금: 1000 + 7 * 3600_000, fetch: 가짜() })).보냄, true)
+
+  // 텔레그램이 거절하면 기록에 안 남긴다 — 남기면 다음 판이 조용히 건너뛴다
+  const 실패 = await 알리기('x', { ...열쇠, 종류: '새것', 지금: 9e12, fetch: 가짜(false, 'nope') })
+  assert.equal(실패.보냄, false)
+  assert.match(실패.까닭, /401/)
+  assert.equal(JSON.parse(await readFile(기록파일, 'utf8')).새것, undefined, '실패는 기록에 안 남는다')
+
+  // 통신이 터져도 던지지 않는다
+  const 터짐 = await 알리기('x', { ...열쇠, 종류: '터짐', 지금: 9e12, fetch: async () => { throw new Error('끊김') } })
+  assert.equal(터짐.보냄, false)
+  assert.match(터짐.까닭, /끊김/)
+
+  // 통신이 끊기면 다시 걸어 본다 — 몇 분 사이에 두 번 끊겼다 (실측).
+  // 알림을 놓치면 계정이 조용히 멈춘 것을 아무도 모른다
+  let 부른수 = 0
+  const 두번실패 = async () => {
+    부른수 += 1
+    if (부른수 < 3) throw new Error('ETIMEDOUT')
+    return { ok: true, status: 200, text: async () => '{}' }
+  }
+  const 되살아남 = await 알리기('x', { ...열쇠, 종류: '끊김', 지금: 8e12, fetch: 두번실패, 쉬기: async () => {} })
+  assert.equal(되살아남.보냄, true, '두 번 끊겨도 세 번째에 간다')
+  assert.equal(되살아남.시도, 3)
+
+  // 네 번째는 없다. 무한정 매달리면 발행이 멈춘다
+  부른수 = 0
+  const 계속끊김 = await 알리기('x', { ...열쇠, 종류: '계속', 지금: 8.5e12, fetch: async () => { 부른수 += 1; throw new Error('ETIMEDOUT') }, 쉬기: async () => {} })
+  assert.equal(계속끊김.보냄, false)
+  assert.equal(부른수, 3, '세 번만 걸어 본다')
+  assert.match(계속끊김.까닭, /3번 시도/)
+
+  // 토큰이 틀리면(4xx) 다시 걸어도 같은 답이다. 한 번에 그만둔다
+  부른수 = 0
+  const 틀린토큰 = await 알리기('x', { ...열쇠, 종류: '401', 지금: 8.6e12, 쉬기: async () => {},
+    fetch: async () => { 부른수 += 1; return { ok: false, status: 401, text: async () => 'unauthorized' } } })
+  assert.equal(틀린토큰.보냄, false)
+  assert.equal(부른수, 1, '4xx 는 다시 안 건다')
+
+  // 5xx 는 저쪽 사정이라 다시 걸어 본다
+  부른수 = 0
+  await 알리기('x', { ...열쇠, 종류: '502', 지금: 8.7e12, 쉬기: async () => {},
+    fetch: async () => { 부른수 += 1; return { ok: false, status: 502, text: async () => 'bad gateway' } } })
+  assert.equal(부른수, 3, '5xx 는 다시 건다')
+
+  await rm(방, { recursive: true, force: true })
+}
+console.log('통과 — 알림 검사 22개')
+
+// 홈수집 — 쿠키 한 줄을 브라우저가 받는 모양으로 바꾼다
+{
+  const { 쿠키풀기, 쿠키죽음, 홈에서걷기 } = await import('./src/홈수집.mjs')
+  const 푼것 = 쿠키풀기('sessionid=abc; ds_user_id=123; 빈칸=  ')
+  assert.equal(푼것.length, 3)
+  assert.deepEqual(푼것[0], { name: 'sessionid', value: 'abc', domain: '.threads.com', path: '/', secure: true })
+  assert.equal(푼것[1].value, '123')
+  // 값에 = 가 들어 있어도 첫 = 에서만 가른다
+  assert.equal(쿠키풀기('a=b=c')[0].value, 'b=c')
+  // = 없는 조각은 버린다. 빈 줄도 버린다
+  assert.deepEqual(쿠키풀기('쓰레기; ; a=1').map((c) => c.name), ['a'])
+  assert.deepEqual(쿠키풀기(''), [])
+  assert.deepEqual(쿠키풀기(undefined), [])
+
+  // 쿠키가 아예 없으면 브라우저를 띄우기도 전에 쿠키죽음이다
+  await assert.rejects(() => 홈에서걷기({ 쿠키: '', 계정: '시험' }), (e) => {
+    assert.ok(e instanceof 쿠키죽음)
+    assert.equal(e.계정, '시험')
+    assert.match(e.message, /쿠키가 죽었다/)
+    return true
+  })
+}
+console.log('통과 — 홈수집 검사 9개')
+
+
+// 미디어 지문 — 원글 번호도 요리 이름도 다른데 같은 파일인 글을 잡는다.
+// 실측: 치즈폭탄 또띠아파이가 원글 다섯 개에서 나왔고 그중 하나는 요리 이름조차 비어 있었다
+{
+  const { 다른비트수, 이미올린미디어, 미디어적기, 지문만들기, 그림해시들, 소리해시, 바이트해시 } =
+    await import('./src/미디어지문.mjs')
+  const { mkdtemp, rm, writeFile, mkdir } = await import('node:fs/promises')
+  const { tmpdir } = await import('node:os')
+  const { join } = await import('node:path')
+  const 방 = await mkdtemp(join(tmpdir(), '지문-'))
+  const 하루 = 86400000
+  const 지금 = 1_800_000_000_000
+
+  assert.equal(다른비트수('1010', '1010'), 0)
+  assert.equal(다른비트수('1010', '0101'), 4)
+  // 길이가 다르거나 없으면 비교하지 않는다 — 0 을 돌려주면 아무거나 다 걸린다
+  assert.equal(다른비트수('1010', '101'), Infinity)
+  assert.equal(다른비트수(null, '1010'), Infinity)
+  assert.equal(다른비트수('', ''), Infinity)
+
+  // 빈 지문은 아무것도 막지 않는다. 막으면 미디어 못 받은 글이 전부 걸린다
+  assert.equal(await 이미올린미디어({ 바이트: [], 그림: [], 소리: [] }, { 뿌리: 방, 지금 }), null)
+  await 미디어적기({ 바이트: [], 그림: [], 소리: [] }, 'EMPTY', { 뿌리: 방, 지금 })
+  assert.equal(await 이미올린미디어({ 바이트: ['aa'], 그림: [] }, { 뿌리: 방, 지금 }), null, '빈 지문은 적히지도 않는다')
+
+  // 바이트가 같으면 확실하다
+  await 미디어적기({ 바이트: ['해시가', '둘'], 그림: ['1100110011001100110011001100110011001100110011001100110011001100'] }, 'AAA', { 뿌리: 방, 지금 })
+  const 바 = await 이미올린미디어({ 바이트: ['둘'], 그림: [] }, { 뿌리: 방, 지금 })
+  assert.equal(바?.code, 'AAA')
+  assert.equal(바.까닭, '같은 파일')
+
+  // 형식만 바뀐 사진은 그림해시가 잡는다 (webp↔jpg 가 실제로 0비트 차이였다)
+  const 살짝다름 = '1100110011001100110011001100110011001100110011001100110011001101'
+  const 그 = await 이미올린미디어({ 바이트: ['처음보는것'], 그림: [살짝다름] }, { 뿌리: 방, 지금 })
+  assert.equal(그?.까닭, '같은 그림')
+
+  // 많이 다르면 안 걸린다 — 다른 요리까지 막으면 쓸 수가 없다
+  const 아주다름 = '0011001100110011001100110011001100110011001100110011001100110011'
+  assert.equal(await 이미올린미디어({ 바이트: ['x'], 그림: [아주다름] }, { 뿌리: 방, 지금 }), null)
+
+  // 오래된 것은 안 본다
+  assert.equal(await 이미올린미디어({ 바이트: ['둘'], 그림: [] }, { 뿌리: 방, 지금: 지금 + 31 * 하루 }), null)
+
+  // 실제 파일로 — 같은 바이트면 같은 해시다
+  const 폴더 = join(방, '글하나')
+  await mkdir(폴더, { recursive: true })
+  await writeFile(join(폴더, '01.bin'), 'AAAA')
+  await writeFile(join(폴더, 'post.json'), '{}')
+  const 지문 = await 지문만들기(폴더)
+  assert.equal(지문.바이트.length, 1, 'json 은 지문에서 뺀다')
+  assert.equal(지문.바이트[0], await 바이트해시(join(폴더, '01.bin')))
+  // 그림이 아닌 파일은 그림해시도 소리해시도 없다
+  assert.deepEqual(await 그림해시들(join(폴더, '01.bin')), [])
+  assert.equal(await 소리해시(join(폴더, '01.bin')), null)
+  // 없는 폴더는 빈 지문이다. 던지지 않는다
+  assert.deepEqual(await 지문만들기(join(방, '없는폴더')), { 바이트: [], 그림: [], 소리: [] })
+
+  // 소리로도 가린다 — 화면을 잘라내도 소리는 안 바뀐다. 20% 크롭이 0/39 비트였다
+  {
+    const 소리A = '101010101010101010101010101010101010101'
+    const 살짝 = '101010101010101010101010101010101010100'   // 1비트 다름
+    const 딴것 = '000111000111000111000111000111000111000'
+    await 미디어적기({ 바이트: [], 그림: [], 소리: [소리A] }, 'SOUND', { 뿌리: 방, 지금 })
+    const s1 = await 이미올린미디어({ 바이트: [], 그림: [], 소리: [살짝] }, { 뿌리: 방, 지금 })
+    assert.equal(s1?.까닭, '같은 소리')
+    assert.equal(await 이미올린미디어({ 바이트: [], 그림: [], 소리: [딴것] }, { 뿌리: 방, 지금 }), null)
+    // 소리만 있고 그림이 없어도 적히고 걸린다
+    assert.equal((await 이미올린미디어({ 바이트: [], 그림: [], 소리: [소리A] }, { 뿌리: 방, 지금 }))?.code, 'SOUND')
+  }
+
+  await rm(방, { recursive: true, force: true })
+}
+
+  // 밝기값 64개로 해시를 만든다. 사진과 영상이 같은 잣대를 쓴다
+  {
+    const { 밝기로해시, 장면해시들 } = await import('./src/미디어지문.mjs')
+    // 오른쪽 이웃과 견주므로 9×8 = 72개를 받아 64비트를 만든다
+    assert.equal(밝기로해시(null), null)
+    assert.equal(밝기로해시([1, 2, 3]), null, '칸 수가 안 맞으면 안 만든다')
+    assert.equal(밝기로해시(Array(64).fill(128)), null, '8×8 로는 못 만든다')
+    // 한 색으로 꽉 찬 것은 아무 데나 걸린다. 지문으로 쓰지 않는다
+    assert.equal(밝기로해시(Array(72).fill(128)), null)
+    // 한 방향으로만 기울어진 것도 아무 데나 걸린다. 그것도 안 쓴다
+    const 한쪽기울기 = []
+    for (let y = 0; y < 8; y += 1) for (let x = 0; x < 9; x += 1) 한쪽기울기.push(255 - x * 20)
+    assert.equal(밝기로해시(한쪽기울기), null)
+
+    // 줄마다 방향이 다른 그림은 제대로 지문이 나온다
+    const 얼룩 = []
+    for (let y = 0; y < 8; y += 1) {
+      for (let x = 0; x < 9; x += 1) 얼룩.push(y % 2 === 0 ? 255 - x * 20 : x * 20)
+    }
+    const 값 = 밝기로해시(얼룩)
+    assert.equal(값.length, 64)
+    assert.equal(값.slice(0, 8), '1'.repeat(8), '어두워지는 줄은 1')
+    assert.equal(값.slice(8, 16), '0'.repeat(8), '밝아지는 줄은 0')
+
+    // 밝기를 통째로 낮춰도 기울기는 그대로다 — 차이해시를 쓰는 까닭이다.
+    // 평균해시였다면 파스타와 잔치국수가 4비트 차이로 걸렸다 (실측)
+    assert.equal(밝기로해시(얼룩.map((v) => v / 3)), 값)
+    // 영상이 아니면 장면을 안 뽑는다
+    assert.deepEqual(await 장면해시들('없는파일.jpg'), [])
+    // ffmpeg 이 없거나 못 읽어도 던지지 않는다. 이 겹만 조용히 논다
+    assert.deepEqual(await 장면해시들('없는파일.mp4'), [])
+  }
+
+
+console.log('통과 — 미디어지문 검사 28개')
+
+// 레시피 판정 — 분량만 세면 요리가 아닌 글이 새어 든다.
+// "GROK 으로 전자책 만들기, 프롬프트 8종" 이 번호 목록을 분량으로 인정받아 발행됐다 (실측)
+{
+  const { 레시피있나 } = await import('./src/compose.mjs')
+  const 전자책 = { 글타래: [
+    '1. 고부가가치 전자책 아웃라인 설계 프롬프트 — 10개 챕터, 세부 소주제 3~5개',
+    '2. 챕터 초안 작성 프롬프트 — 톤 3가지 중 선택',
+    '3. 사례 삽입 프롬프트 — 미니 사례 2개 추가',
+    '4. 가독성 편집 프롬프트 5개, 제목 10개 생성',
+  ] }
+  assert.equal(레시피있나(전자책), false, '숫자 목록만 있는 글은 레시피가 아니다')
+
+  // 불을 안 쓰는 레시피도 통과해야 한다 — 조리 동작으로 재면 드레싱이 통째로 막힌다
+  const 드레싱 = { 글타래: ['올리브오일 2큰술 간장 1큰술 식초 1큰술 레몬즙 1큰술 알룰로스 1큰술 참기름 0.5큰술'] }
+  assert.equal(레시피있나(드레싱), true, '섞기만 하는 레시피도 요리다')
+
+  const 볶음 = { 글타래: ['🛒 준비물\n돼지고기 300g\n양파 1개\n고추장 2큰술\n간장 1큰술\n\n1. 팬에 볶는다'] }
+  assert.equal(레시피있나(볶음), true)
+
+  // 분량이 모자라면 재료가 많아도 아니다
+  assert.equal(레시피있나({ 글타래: ['간장 설탕 마늘 양파를 넣고 볶는다'] }), false, '분량이 없으면 레시피가 아니다')
+  // 재료가 한 가지뿐이면 아니다 — 숫자가 우연히 맞는 글을 막는다
+  assert.equal(레시피있나({ 글타래: ['감자 3개 사서 5개 담고 2개 남김'] }), false)
+  assert.equal(레시피있나({ 글타래: [] }), false)
+  assert.equal(레시피있나({}), false)
+}
+
+  // 재료와 분량만 보면 요리가 아닌 글이 줄줄이 통과한다 (실측 — 다섯 중 넷).
+  // 레시피는 '무엇을' 이 아니라 '어떻게' 를 알려 주는 글이다
+  const 가짜들 = [
+    ['맛집 후기', ['어제 간 집 삼겹살 2인분에 소주 1병, 계란찜 1개 시켰는데 소금간이 딱이었음. 마늘도 3쪽 서비스']],
+    ['장보기 자랑', ['오늘 마트에서 두부 2모, 계란 1판, 우유 2개, 버터 1개 사왔다. 설탕도 1kg 담음']],
+    ['다이어트 기록', ['아침 계란 2개, 점심 닭 200g, 저녁 두부 1모. 소금 안 쓰고 3주 했더니 5kg 빠짐']],
+    ['식당 메뉴판', ['김치찌개 9000원 2인분, 계란말이 8000원 1개, 공기밥 1000원 2개, 소주 5000원']],
+    ['요리 도구 홍보', ['에어프라이어 1대로 감자 300g, 고구마 2개, 치즈 1장까지 다 됩니다 후기 500개']],
+  ]
+  for (const [이름, 타래] of 가짜들) assert.equal(레시피있나({ 글타래: 타래 }), false, `${이름} 은 레시피가 아니다`)
+
+  // 순서 표시만 있어도 레시피다 — 조리 동작을 요구하면 무침·드레싱이 막힌다
+  assert.equal(레시피있나({ 글타래: ['🧡재료🧡 도라지 300g 오이 1개 고춧가루 1.5T 고추장 1T\n🧡순서🧡 1.쓴맛빼기 2.절이기'] }), true)
+  // 번호 목록이 셋 이상이면 만드는 차례로 본다
+  assert.equal(레시피있나({ 글타래: ['두부 1모 간장 2큰술 설탕 1큰술\n1. 썬다\n2. 굽는다\n3. 졸인다'] }), true)
+  // 계량이 촘촘하면 순서가 없어도 레시피다 (드레싱처럼 섞기만 하는 글)
+  assert.equal(레시피있나({ 글타래: ['올리브오일 2큰술 간장 1큰술 식초 1큰술 레몬즙 1큰술 알룰로스 1큰술 참기름 0.5큰술'] }), true)
+
+
+  // 조리 계량과 장보기 단위가 섞인 진짜 레시피 — 단위만 세면 이게 막힌다. 실제로 막혔다
+  assert.equal(레시피있나({ 글타래: ['두부 1모, 계란 2개, 대파 1단, 소금 약간, 후추 약간, 올리브오일 3t, 버터 15g'] }), true,
+    '어림말("약간")이 있으면 레시피다 — 장보기·메뉴판은 이렇게 안 쓴다')
+  // 조리 계량이 촘촘하면 어림말이 없어도 레시피다
+  assert.equal(레시피있나({ 글타래: ['돼지고기 300g 양파 1개 대파 1대 마늘 5쪽 간장 2큰술 설탕 1큰술 후추'] }), true)
+  // 재료만 늘어놓은 장보기 자랑은 아니다
+  assert.equal(레시피있나({ 글타래: ['마트에서 두부 2모 계란 1판 우유 2개 버터 1개 설탕 1kg 마늘 3쪽 사왔다'] }), false)
+  // **구매말로 막지 않는다.** "쿠팡에서 사왔어, 링크 줄게" 하면서 레시피를 적는 글이 흔하다 —
+  // 우리 글이 바로 그 꼴이다. 조리말·순서가 있으면 구매말이 있어도 레시피다
+  assert.equal(레시피있나({ 글타래: [
+    '이거 쿠팡에서 사왔는데 진짜 좋아 링크 줄게\n두부 1모 계란 2개 대파 1단 간장 2큰술\n1. 썬다\n2. 굽는다\n3. 졸인다',
+  ] }), true, '사왔다가 있어도 레시피면 통과한다')
+  assert.equal(레시피있나({ 글타래: ['김치찌개 9000원 2인분, 계란말이 8000원 1개, 공기밥 1000원 2개, 소주 5000원'] }), false)
+
+console.log('통과 — 레시피 판정 검사 19개')

@@ -83,6 +83,7 @@ export const 화면 = `<!doctype html>
   .날{white-space:nowrap;color:var(--옅은글);font-size:.8rem}
   .동그라미{font-size:1.15rem;line-height:1}
   .ㄱ올림{color:var(--좋음)} .ㄱ못올림{color:var(--회색)}
+  .ㄱ건너뜀{color:var(--회색)} .ㄱ실패{color:var(--나쁨)}
   .ㄱ기록없음,.ㄱ아직{color:var(--선)}
   .뜻{display:flex;gap:1.1rem;flex-wrap:wrap;font-size:.78rem;color:var(--옅은글);margin-top:.9rem}
   .공유표{display:inline-block;font-size:.68rem;padding:.05rem .35rem;border-radius:5px;
@@ -150,6 +151,8 @@ export const 화면 = `<!doctype html>
   <div class="뜻">
     <span class="ㄱ올림">● 올림</span>
     <span class="ㄱ못올림">◌ 돌았지만 못 올림</span>
+    <span class="ㄱ건너뜀">⏸ 너무 붙어서 건너뜀</span>
+    <span class="ㄱ실패">✕ 실패</span>
     <span>○ 발행 전 · 기록 없음</span>
   </div>
   <hr style="border:none;border-top:1px solid var(--선);margin:1.2rem 0 .2rem">
@@ -261,6 +264,7 @@ async function 수익그리기() {
 }
 
 const 표시 = { 올림: ['\\u25cf', 'ㄱ올림'], 못올림: ['\\u25cc', 'ㄱ못올림'],
+  건너뜀: ['\\u23f8', 'ㄱ건너뜀'], 실패: ['\\u2715', 'ㄱ실패'],
   기록없음: ['\\u25cb', 'ㄱ기록없음'], 아직: ['\\u25cb', 'ㄱ아직'] }
 
 // 계정마다 시각을 엇갈리게 권한다. 같은 시각에 두 계정이 올리면 한 사람이 굴리는 게 보인다

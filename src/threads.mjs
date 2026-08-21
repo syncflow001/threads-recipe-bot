@@ -88,7 +88,10 @@ export async function 상세(작성자, code, opts) {
   const html = await 문서받기(`${BASE}/@${작성자}/post/${code}`, opts)
   const 조회수 = Number(html.match(/"impression_count"\s*:\s*(\d+)/)?.[1] ?? NaN)
 
-  const 전부 = 게시물뽑기(html).filter((p) => p.code !== code && p.본문.trim())
+  const 다 = 게시물뽑기(html)
+  // 홈에서 걷은 글은 번호와 작성자뿐이다. 본문·좋아요·미디어를 여기서 건져 준다
+  const 본글 = 다.find((p) => p.code === code) ?? null
+  const 전부 = 다.filter((p) => p.code !== code && p.본문.trim())
   const 내것 = 전부.filter((p) => p.작성자 === 작성자).sort((a, b) => (a.올린때 ?? 0) - (b.올린때 ?? 0))
 
   // 작성자는 레시피를 이어 단 뒤, 나중에 댓글마다 답장도 단다. 그 답장까지 재료로 넘기면
@@ -100,10 +103,21 @@ export async function 상세(작성자, code, opts) {
   )
   const 글타래 = 내것.filter((p) => (p.올린때 ?? 0) <= 남의첫댓글)
 
-  return { 조회수: Number.isFinite(조회수) ? 조회수 : null, 글타래 }
+  return { 조회수: Number.isFinite(조회수) ? 조회수 : null, 글타래, 본글 }
 }
 
 // 상세 요청은 900KB 라 무겁다. 한꺼번에 다 부르지 않고 묶음으로 나눠 부른다.
+// 확산(조회수÷팔로워)의 분모다. 프로필 문서에만 있다 — 상세 문서에는 없다 (실측)
+export async function 팔로워수(작성자, opts) {
+  try {
+    const html = await 문서받기(`${BASE}/@${작성자}`, opts)
+    const n = Number(html.match(/"follower_count"\s*:\s*(\d+)/)?.[1] ?? NaN)
+    return Number.isFinite(n) ? n : null
+  } catch {
+    return null // 못 받으면 확산을 안 매긴다. 지어내지 않는다
+  }
+}
+
 export async function 상세채우기(목록, { 묶음 = 6, ...opts } = {}) {
   for (let i = 0; i < 목록.length; i += 묶음) {
     await Promise.all(
@@ -112,6 +126,8 @@ export async function 상세채우기(목록, { 묶음 = 6, ...opts } = {}) {
           const d = await 상세(p.작성자, p.code, opts)
           p.조회수 = d.조회수
           p.글타래 = d.글타래.map((x) => x.본문)
+          // 비어 있는 자리만 메운다. 이미 아는 값을 덮어쓰면 검색으로 받은 것이 지워진다
+          if (d.본글) for (const [칸, 값] of Object.entries(d.본글)) if (p[칸] === undefined) p[칸] = 값
         } catch {
           p.조회수 = null // 틀린 숫자를 보여주느니 비운다
           p.글타래 = []

@@ -51,6 +51,8 @@ const 열쇠들 = [
   ['COUPANG_ACCESS_KEY', '쿠팡 제휴 링크용', false],
   ['COUPANG_SECRET_KEY', '쿠팡 제휴 링크용', false],
   ['BLOB_READ_WRITE_TOKEN', '영상을 같이 올리려면 필요', false],
+  ['TELEGRAM_BOT_TOKEN', '쿠키가 죽으면 텔레그램으로 알림', false],
+  ['TELEGRAM_CHAT_ID', '알림을 받을 내 텔레그램 번호', false],
 ]
 
 const 있나 = (p) => access(p).then(() => true, () => false)
@@ -167,7 +169,10 @@ async function 계정만들기(받은것) {
 
   const 서식 = await readFile('.env.example', 'utf8').catch(() =>
     열쇠들.map(([n]) => `${n}=`).join('\n') + '\n')
-  await writeFile(열쇠파일(이름), 서식, { mode: 0o600 })
+  // 공유 열쇠를 빈 줄로 넣으면 .env.local 의 값을 가린다 — 실행할 때 뒤 파일이 이기기 때문이다.
+  // 이것 때문에 Blob 토큰이 빈 값으로 읽혀 영상이 통째로 안 붙었다
+  const 계정것만 = 서식.split('\n').filter((l) => !공유열쇠.has(l.split('=')[0].trim())).join('\n')
+  await writeFile(열쇠파일(이름), 계정것만, { mode: 0o600 })
 
   const 바탕 = await readFile('persona.json', 'utf8').then(JSON.parse).catch(() => ({}))
   await writeFile(말투파일(이름), JSON.stringify({
