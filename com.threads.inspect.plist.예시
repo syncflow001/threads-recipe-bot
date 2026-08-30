@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 30분마다 전 계정을 훑어 이상이 있으면 텔레그램으로 알리는 「점검」을 맥이 켜질 때마다
+     저절로 띄우는 launchd 등록 예시다. 점검은 읽기만 한다 — 무엇도 켜거나 끄지 않는다.
+
+     쓰는 법 — 아래 /Users/사용자/threads-recipe-bot 를 내 폴더로 바꾼 뒤,
+       1) cp "com.threads.inspect.plist.예시" ~/Library/LaunchAgents/com.threads.inspect.plist
+       2) open -e ~/Library/LaunchAgents/com.threads.inspect.plist   ← 경로 세 군데를 고친다
+       3) launchctl load ~/Library/LaunchAgents/com.threads.inspect.plist
+     끄고 싶으면 launchctl unload ~/Library/LaunchAgents/com.threads.inspect.plist 를 친다. -->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.threads.inspect</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>/Users/사용자/threads-recipe-bot/점검.sh</string>
+  </array>
+  <key>WorkingDirectory</key><string>/Users/사용자/threads-recipe-bot</string>
+  <key>StartInterval</key><integer>1800</integer>
+  <key>RunAtLoad</key><false/>
+  <key>StandardOutPath</key><string>/Users/사용자/threads-recipe-bot/logs/점검.out</string>
+  <key>StandardErrorPath</key><string>/Users/사용자/threads-recipe-bot/logs/점검.err</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key><string>/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    <key>LANG</key><string>ko_KR.UTF-8</string>
+  </dict>
+</dict>
+</plist>

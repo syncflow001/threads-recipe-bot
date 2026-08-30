@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 새 대시보드(대시보드서버.mjs)를 맥이 켜질 때마다 저절로 띄우는 launchd 등록 예시다.
+     「설정화면 항상 켜두기.command」 를 더블클릭하면 이 파일을 알아서 만들어 준다 —
+     이 예시는 화면 없이 손으로 걸고 싶을 때만 쓴다.
+
+     쓰는 법 — 아래 /Users/사용자/threads-recipe-bot 를 내 폴더로, 100.64.0.1 을
+     `tailscale ip -4` 로 뜬 내 테일스케일 주소로 바꾼 뒤,
+       1) cp "com.threads.dashboard.plist.예시" ~/Library/LaunchAgents/com.threads.dashboard.plist
+       2) open -e ~/Library/LaunchAgents/com.threads.dashboard.plist   ← 경로·주소를 고친다
+       3) launchctl load ~/Library/LaunchAgents/com.threads.dashboard.plist
+     끄고 싶으면 launchctl unload ~/Library/LaunchAgents/com.threads.dashboard.plist 를 친다.
+
+     node 경로는 맥마다 다르다. `which node` 로 확인해 적는다
+     (homebrew 는 /opt/homebrew/bin/node, 공식 설치판은 /usr/local/bin/node). -->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.threads.dashboard</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/local/bin/node</string>
+    <string>--env-file=/Users/사용자/threads-recipe-bot/.env.local</string>
+    <string>/Users/사용자/threads-recipe-bot/대시보드서버.mjs</string>
+  </array>
+  <key>WorkingDirectory</key><string>/Users/사용자/threads-recipe-bot</string>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>StandardOutPath</key><string>/Users/사용자/threads-recipe-bot/logs/대시보드.out</string>
+  <key>StandardErrorPath</key><string>/Users/사용자/threads-recipe-bot/logs/대시보드.err</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key><string>/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin</string>
+    <key>LANG</key><string>ko_KR.UTF-8</string>
+    <key>BIND</key><string>100.64.0.1</string>
+    <key>PORT</key><string>7788</string>
+    <key>NOOPEN</key><string>1</string>
+    <key>NODE_ENV</key><string>production</string>
+  </dict>
+</dict>
+</plist>

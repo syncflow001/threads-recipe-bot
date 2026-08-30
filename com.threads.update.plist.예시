@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 매일 11:00 에 새 판이 나왔는지 확인하고 코드·문서만 덮는 예약이다.
+     장부·열쇠·미디어·로그인은 절대 안 덮는다 (업데이트.mjs 가 지킨다).
+
+     쓰는 법 — 세 줄이다. 아래 /Users/사용자/threads-recipe-bot 를 내 폴더로 바꾼 뒤,
+       1) cp "com.threads.update.plist.예시" ~/Library/LaunchAgents/com.threads.update.plist
+       2) open -e ~/Library/LaunchAgents/com.threads.update.plist   ← 경로 세 군데를 고친다
+       3) launchctl load ~/Library/LaunchAgents/com.threads.update.plist
+     끄고 싶으면 launchctl unload ~/Library/LaunchAgents/com.threads.update.plist 를 친다.
+
+     설정 화면의 「관리자 도구 → 자동 업데이트」 스위치를 켜면 이 파일을 손으로 만들 필요가 없다.
+     이 예시는 화면 없이 손으로 걸고 싶을 때를 위한 것이다.
+
+     node 경로는 맥마다 다르다. `which node` 로 확인해 적는다
+     (homebrew 는 /opt/homebrew/bin/node, 공식 설치판은 /usr/local/bin/node). -->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.threads.update</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/local/bin/node</string>
+    <string>/Users/사용자/threads-recipe-bot/업데이트.mjs</string>
+  </array>
+  <key>WorkingDirectory</key><string>/Users/사용자/threads-recipe-bot</string>
+  <key>StartCalendarInterval</key>
+  <array>
+    <dict><key>Hour</key><integer>11</integer><key>Minute</key><integer>0</integer></dict>
+  </array>
+  <!-- 켤 때 바로 돌리지 않는다. 11시를 놓쳤으면 다음 날 11시에 돈다 -->
+  <key>RunAtLoad</key><false/>
+  <key>StandardOutPath</key><string>/Users/사용자/threads-recipe-bot/logs/launchd-update.out</string>
+  <key>StandardErrorPath</key><string>/Users/사용자/threads-recipe-bot/logs/launchd-update.err</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key><string>/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    <key>LANG</key><string>ko_KR.UTF-8</string>
+  </dict>
+</dict>
+</plist>

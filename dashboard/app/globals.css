@@ -1,0 +1,145 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-sans);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+  /* design-system/브랜드.md §3 의 색을 그대로 옮겼다 — 민트 초록 · 옅은 민트 바탕 · 흰 카드.
+     회색만 남은 판을 되돌린 것이다 (2026-08-28). 뜻이 있는 색 넷(좋음·나쁨·회색·강조)은 건드리지 않는다 */
+  --background: #eef3f0;            /* --바탕 */
+  --foreground: #1f2a37;            /* --글 */
+  --card: #ffffff;                  /* --판 */
+  --card-foreground: #1f2a37;
+  --popover: #ffffff;
+  --popover-foreground: #1f2a37;
+  --primary: #0f7a4d;               /* 단추 색 — 짙은 숲초록. 2026-08-28 사용자가 골랐다 */
+  --primary-hover: #16a34a;         /* 마우스를 올렸을 때. 한 톤 밝아져서 눌리는 것이 보인다 */
+  --primary-foreground: #ffffff;    /* 초록 위의 글자. 이 초록은 흰 글자가 5.4:1 로 또렷하다 */
+  --secondary: #e4f3ec;             /* --칠연 */
+  --secondary-foreground: #25805e;  /* --칠짙 */
+  --muted: #e9f0ec;
+  --muted-foreground: #6b7a76;      /* --옅은글 */
+  --accent: #e4f3ec;
+  --accent-foreground: #25805e;
+  --destructive: #b91c1c;           /* --나쁨 */
+  --border: #dde6e2;                /* --칸선 */
+  --input: #dde6e2;
+  --ring: #0f7a4d;
+  --chart-1: #0f7a4d;
+  --chart-2: #7cc9a8;
+  --chart-3: #c2410c;               /* --강조 · 수익 막대 */
+  --chart-4: #8a7f6e;               /* --회색 */
+  --chart-5: #25805e;
+  --radius: 0.625rem;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #1f2a37;
+  --sidebar-primary: #0f7a4d;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #e4f3ec;
+  --sidebar-accent-foreground: #25805e;
+  --sidebar-border: #dde6e2;
+  --sidebar-ring: #0f7a4d;
+}
+
+.dark {
+  /* 밝은 판과 같은 민트 결을 어둡게 옮긴 것 — 바탕에 초록기를 조금 남겨 회색 판으로 안 보이게 한다 */
+  --background: #101714;
+  --foreground: #e8efeb;
+  --card: #16211d;
+  --card-foreground: #e8efeb;
+  --popover: #16211d;
+  --popover-foreground: #e8efeb;
+  --primary: #128a58;               /* 어두운 판에서는 한 톤 밝게 — 검은 바탕에 너무 묻힌다 */
+  --primary-hover: #19a862;
+  --primary-foreground: #ffffff;
+  --secondary: #22322c;
+  --secondary-foreground: #cfe6dc;
+  --muted: #22322c;
+  --muted-foreground: #9ab2a8;
+  --accent: #22322c;
+  --accent-foreground: #cfe6dc;
+  --destructive: #ef6b6b;
+  --border: #ffffff1a;
+  --input: #ffffff26;
+  --ring: #0f7a4d;
+  --chart-1: #0f7a4d;
+  --chart-2: #7cc9a8;
+  --chart-3: #e07a3f;
+  --chart-4: #a89b88;
+  --chart-5: #25805e;
+  --sidebar: #16211d;
+  --sidebar-foreground: #e8efeb;
+  --sidebar-primary: #0f7a4d;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #22322c;
+  --sidebar-accent-foreground: #cfe6dc;
+  --sidebar-border: #ffffff1a;
+  --sidebar-ring: #3fb98a;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+  /* 테일윈드 4 부터 단추의 기본 커서가 default 다. 누를 수 있는 것은 손가락으로 보여 준다 —
+     못 누르는 것(disabled)은 그대로 화살표다 */
+  button:not(:disabled),
+  [role='button']:not([aria-disabled='true']),
+  summary,
+  label:has(> input[type='checkbox']),
+  a[href] {
+    cursor: pointer;
+  }
+}
