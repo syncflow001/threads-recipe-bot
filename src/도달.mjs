@@ -1,4 +1,5 @@
 // 내 계정 도달이 조용히 깎이는 것을 잡는다 — 제재 1단계는 밴이 아니라 말없는 도달 축소다
+import './그물.mjs'   // IPv6 헛디딤 막기 (부수 효과) — 왜인지는 그 파일 머리에 있다
 import { readFile, readdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import { 안전쓰기 } from './장부쓰기.mjs'

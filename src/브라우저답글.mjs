@@ -16,6 +16,7 @@ const 이름표 = {
   카드지우기: '삭제',        // 카드 오른쪽 위 X
   조각더하기: '스레드에 추가',
   게시: '게시',
+  주제칸: '커뮤니티 또는 주제',   // 2026-09-02 — 여기에 「광고」를 넣는다
 }
 
 const 링크꼴 = /https?:\/\//
@@ -76,6 +77,28 @@ async function 카드지우기(창, 조각, 카드기다림) {
  * 스레드 웹 화면으로 답글을 단다.
  * 주소는 공식 API 의 permalink 여야 한다 — `threads.com/t/{숫자번호}` 는 안 열린다 (실측).
  */
+// 답글 작성창의 「커뮤니티 또는 주제」 칸에 말을 넣고 첫 후보를 고른다.
+//
+// ⚠️ **못 달아도 던지지 않는다.** 태그는 덤이고 글이 올라가는 것이 먼저다.
+//    무엇이 어긋났는지는 돌려주는 말로 남긴다 — 조용히 지나가지 않는다
+export async function 주제붙이기(창, 쪽, 말) {
+  const 칸 = 창.getByRole('textbox', { name: 이름표.주제칸 }).first()
+    .or(창.getByPlaceholder(이름표.주제칸).first())
+  if (!(await 칸.count())) return '주제 칸을 못 찾았다'
+  await 칸.click()
+  await 쪽.waitForTimeout(600)
+  // 한 글자씩 친다 — 붙여넣기로는 후보 목록이 안 뜬다
+  await 쪽.keyboard.type(말, { delay: 90 })
+  await 쪽.waitForTimeout(1500)
+  // 뜬 후보 가운데 **딱 그 말인 것**을 고른다. 「광고대행사」 같은 것이 섞여 있다
+  const 후보 = 창.getByRole('option', { name: 말, exact: true }).first()
+    .or(창.getByText(말, { exact: true }).last())
+  if (!(await 후보.count())) return `후보에 「${말}」 가 없다`
+  await 후보.click()
+  await 쪽.waitForTimeout(800)
+  return `「${말}」 달았다`
+}
+
 export async function 브라우저로답글달기({
   주소,
   조각들,
@@ -84,6 +107,7 @@ export async function 브라우저로답글달기({
   띄우기 = false,      // 눈으로 보고 싶을 때만 참으로 준다
   찍을곳,              // 주면 단계마다 화면을 찍는다. 무엇이 어긋났는지 뒤에서 볼 수 있다
   카드기다림 = 15000,
+  주제달기 = null,     // 「커뮤니티 또는 주제」 칸에 넣을 말. null 이면 안 단다
   chromium,
 } = {}) {
   조각검사(조각들)
@@ -133,6 +157,16 @@ export async function 브라우저로답글달기({
       await 쪽.waitForTimeout(1500)
       카드결과.push(await 카드지우기(창, 조각, 카드기다림))
     }
+    // ⚠️ 2026-09-02 — 답글에 **주제 태그 「광고」**를 단다 (사용자가 정했다).
+    //
+    // 스레드가 공식으로 주는 광고 표시라 많은 계정이 이걸 쓴다. 다만 **본문의 `[광고]` 는 그대로 둔다** —
+    // 브라우저 자동화는 조용히 실패한다. 스레드가 화면을 바꿔 태그가 안 붙어도 아무도 모르는데,
+    // 그때 `[광고]` 까지 뺐으면 **광고 표기가 통째로 사라진다.** 되돌릴 수 없는 위험이다.
+    // 실측상 답글 안의 광고 표기 위치는 조회수를 안 가르므로(상위 88% 대 하위 79%)
+    // 네 글자를 남겨도 손해가 없다 (docs/조사-제휴답글-형식.md §4).
+    //
+    // **실패해도 던지지 않는다.** 태그는 덤이고 글이 올라가는 것이 먼저다
+    const 주제결과 = 주제달기 ? await 주제붙이기(창, 쪽, 주제달기).catch((e) => `못 달았다 — ${e.message.slice(0, 60)}`) : '안 함'
     await 찍기(쪽, '1-올리기직전')
 
     await 창.getByRole('button', { name: 이름표.게시, exact: true }).click()

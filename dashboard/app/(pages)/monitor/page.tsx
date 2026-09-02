@@ -1,9 +1,10 @@
 'use client'
-// 모니터링 쪽 — 헬스체크·조회수 알리미·점검 셋(옛 감시 쪽, HTML 1077~1118, JS 3245~3327 + 점검은 과제 6 고침). 계정을 안 가린다
+// 모니터링 쪽 — 헬스체크·조회수 알리미·점검·섀도우밴 넷(옛 감시 쪽, HTML 1077~1118, JS 3245~3327 + 점검은 과제 6 고침). 계정을 안 가린다
 import { use자료 } from '@/lib/hooks'
 import { 헬스체크 } from '@/components/쪽/monitor/헬스체크'
 import { 조회수알리미 } from '@/components/쪽/monitor/조회수알리미'
 import { 점검 } from '@/components/쪽/monitor/점검'
+import { 섀도우밴 } from '@/components/쪽/monitor/섀도우밴'
 
 export type 감시자료 = {
   헬스체크: { 켜짐: boolean; 간격시간: number; 마지막: { 때: string; 계정수: number; 탈: string[] } | null }
@@ -27,6 +28,7 @@ export default function 모니터링() {
         <헬스체크 자료={감시.data} 에러={감시.error} 다시읽기={() => 감시.refetch()} />
         <조회수알리미 자료={감시.data} 에러={감시.error} 다시읽기={() => 감시.refetch()} />
         <점검 />
+        <섀도우밴 />
       </div>
     </>
   )

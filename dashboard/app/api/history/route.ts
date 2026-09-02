@@ -1,6 +1,4 @@
 // GET /history — 옛 설정화면.mjs 949~985줄 그대로
-import { readFile } from 'node:fs/promises'
-import { join } from 'node:path'
 import { type NextRequest } from 'next/server'
 import { 뿌리 } from '@/lib/뿌리'
 import { 엔진 } from '@/lib/엔진'
@@ -38,11 +36,9 @@ export const GET = 감싸기(async (req: NextRequest) => {
   // 여기서는 계정 파일만 읽고, 주인 모르는 것이 몇 개인지만 알린다
   // 계정이 누른 팔로우는 활동장부.<계정>.jsonl 에 산다(위 하트들 과 같은 곳).
   // 이 파일에는 주인을 모르는 옛 줄만 남아 있어 개수만 센다
-  let 주인모름 = 0
-  try {
-    const 장부 = JSON.parse(await readFile(join(뿌리(), '팔로우장부.주인모름.json'), 'utf8'))
-    주인모름 = Array.isArray(장부) ? 장부.length : 0
-  } catch {}
+  // 경로를 여기서 조립하지 않는다 — 엔진이 계정길() 로 만든 자리를 쓴다 (2026-09-01)
+  const { 주인모름읽기 } = await 엔진('팔로우하기')
+  const 주인모름 = (await 주인모름읽기(뿌리()).catch(() => [])).length
   const 다 = [...길들, ...하트들]
     .filter((v) => v.때)
     .sort((a, b) => String(b.때).localeCompare(String(a.때)))

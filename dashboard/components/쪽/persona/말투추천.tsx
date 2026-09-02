@@ -6,6 +6,7 @@ import { use진행따라붙기 } from '@/lib/hooks'
 import { 부르기 } from '@/lib/api'
 
 export type 추천결과 = {
+  이모지: string
   정체성: string
   말투: string
   표현: string

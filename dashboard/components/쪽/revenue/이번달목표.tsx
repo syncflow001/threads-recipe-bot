@@ -9,6 +9,7 @@ const 경고칸 = 'rounded-xl border border-[#fed7aa] bg-[#fff7ed] p-3 text-sm m
 
 type 목표자료 = {
   월목표?: number
+  수익채널?: { 출처: string }
   안됨?: string
   달성?: { 목표: number; 비율: number; 남은돈: number; 넘었나: boolean } | null
   속도?: { 지난비율: number; 있어야할돈: number; 앞서나: boolean; 이대로면: number } | null
@@ -46,9 +47,12 @@ export function 이번달목표({ 자료, 저장후 }: { 자료?: 목표자료; 
   const 색 = 잘됨 ? 'text-green-700' : 'text-orange-700'
 
   return (
-    <카드 제목="이번 달 목표" 넓게 꼬리={<span className="text-sm text-muted-foreground">계정 공통</span>}>
+    <카드 제목="이번 달 목표" 넓게 꼬리={
+      <span className="text-sm text-muted-foreground">{자료?.수익채널?.출처 ?? '쿠팡파트너스'} 목표</span>}>
       <귀띔>목표를 넣으면 개요 맨 위 고리가 <b>달성률</b>로 바뀌어요.
-        쿠팡 실적은 계정별로 안 갈려서 <b>네 계정이 목표 하나를 같이 씁니다.</b></귀띔>
+        목표는 <b>제휴 채널마다 따로</b> 둡니다 — 지금 세우는 것은{' '}
+        <b>{자료?.수익채널?.출처 ?? '쿠팡파트너스'}</b> 목표예요.{' '}
+        쿠팡 실적은 계정별로 안 갈려서 <b>쿠팡을 쓰는 계정들이 목표 하나를 같이 씁니다.</b></귀띔>
       <div className="mb-2.5 flex flex-wrap items-center gap-1.5">
         <label htmlFor="월목표" className="text-sm font-semibold whitespace-nowrap">한 달에</label>
         <span className="text-sm text-muted-foreground">₩</span>

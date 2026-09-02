@@ -1,5 +1,5 @@
 'use client'
-// 말투 카드 — 정체성·말투·표현·예시 넷 + 추천/저장/내려받기/샘플/대화 다듬기
+// 말투 카드 — 정체성·말투·이모지·표현·예시 다섯 + 추천/저장/내려받기/샘플/대화 다듬기
 // (옛 HTML 920~970, JS 추천받기·저장·내려받기·샘플·대화 3050~3239, 그리기(s) 2426~2436,
 // 새로고침 복구 1620~1656)
 import { useEffect, useState } from 'react'
@@ -13,7 +13,7 @@ import { 샘플칸, type 샘플결과 } from './샘플칸'
 import { 대화다듬기, type 카드값 } from './대화다듬기'
 
 type 뜻자료 = { 정체성: string; 말투: string; 표현: string } | null
-type 말투자료 = { 정체성: string; 말투: string; 표현: string; 예시: string[]; 뜻: 뜻자료 } | null
+type 말투자료 = { 정체성: string; 말투: string; 이모지?: string; 표현: string; 예시: string[]; 뜻: 뜻자료 } | null
 type 상태자료 = { 말투: 말투자료; 정보?: { 언어?: string } }
 
 // 뜻이 다 비었으면 안 지녔던 것으로 친다 — 저장할 때 뜻지움 을 켜서 옛 파일 뜻을 지운다(옛 뜻그리기 3096~3099)
@@ -26,6 +26,8 @@ export function 말투() {
   const [정체성, 정체성담기] = useState('')
   const [말투값, 말투값담기] = useState('')
   const [표현, 표현담기] = useState('')
+  // 이모지는 계정 것이다 — 팩이 정하지 않는다 (2026-09-02 사용자 결정)
+  const [이모지, 이모지담기] = useState('')
   const [예시, 예시담기] = useState(['', '', ''])
   const [예시꼬리, 예시꼬리담기] = useState(['', '', ''])
   const [뜻, 뜻담기] = useState<뜻자료>(null)
@@ -40,6 +42,7 @@ export function 말투() {
     정체성담기(m?.정체성 || '')
     말투값담기(m?.말투 || '')
     표현담기(m?.표현 || '')
+    이모지담기(m?.이모지 || '')
     예시담기([0, 1, 2].map((i) => m?.예시?.[i] || ''))
     예시꼬리담기(['', '', ''])
     뜻담기(정리된뜻(m?.뜻))
@@ -54,6 +57,7 @@ export function 말투() {
     정체성담기(r.정체성)
     말투값담기(r.말투)
     표현담기(r.표현)
+    if (r.이모지) 이모지담기(r.이모지)
     뜻담기(정리된뜻(r.뜻))
     let 채운수 = 0
     let 덮은적있나 = false
@@ -87,7 +91,7 @@ export function 말투() {
   const 말투저장 = async () => {
     저장중담기(true)
     try {
-      await 부르기('/persona', { 정체성, 말투: 말투값, 표현, 예시, 뜻, 뜻지움: !뜻 })
+      await 부르기('/persona', { 정체성, 말투: 말투값, 이모지, 표현, 예시, 뜻, 뜻지움: !뜻 })
       알림담기('저장했습니다. 다음 실행부터 반영됩니다. ✓')
       상태.refetch()
     } catch (err: any) { 알림담기('실패 — ' + err.message) }
@@ -156,6 +160,15 @@ export function 말투() {
         placeholder="ㅋㅋ, ㅎㅎ, ㅠㅠ"
         className="mb-1 w-full rounded-lg border px-2.5 py-1.5 text-sm" />
       {뜻?.표현 && <div className="mb-2 text-xs text-muted-foreground"><b>뜻</b> {뜻.표현}</div>}
+      {/* 이모지 규칙 — 팩이 아니라 계정이 정한다. 비워 두면 글에 이모지 규칙이 안 나간다 */}
+      <label className="mb-1 block text-sm font-medium">본문 이모지 규칙</label>
+      <input value={이모지} onChange={(e) => 이모지담기(e.target.value)}
+        placeholder="맨 끝에 딱 하나만. 음식과 어울리는 것으로."
+        className="mb-1 w-full rounded-lg border px-2.5 py-1.5 text-sm" />
+      <div className="mb-2 text-xs text-muted-foreground">
+        본문에 이모지를 <b>얼마나·어디에</b> 쓸지 한 줄로 적습니다. 레시피 답글의 🛒·1️⃣ 같은
+        형식용 이모지는 여기와 무관합니다 — 그건 요리 팩이 정합니다.
+      </div>
       {(['글 예시 ①', '글 예시 ②', '글 예시 ③'] as const).map((꼬리표, i) => (
         <div key={i}>
           <label className="mb-1 block text-sm font-medium">
@@ -173,7 +186,22 @@ export function 말투() {
           말투 저장
         </button>
         <a href={`/api/persona-file?profile=${encodeURIComponent(계정)}`} download
-          onClick={() => 알림담기('내려받았습니다 — 마지막으로 「말투 저장」한 내용입니다. ✓')}
+          onClick={async (e) => {
+            // ⚠️ 링크를 그냥 누르면 서버가 500 을 줘도 「내려받았습니다 ✓」가 뜬다 (2026-09-01 실측).
+            //    먼저 받아 보고, 된 것만 알린다
+            e.preventDefault()
+            try {
+              const 답 = await fetch(`/api/persona-file?profile=${encodeURIComponent(계정)}`)
+              if (!답.ok) { 알림담기(`말투 파일을 못 받았습니다 (${답.status}). 「말투 저장」을 먼저 눌러 보세요.`); return }
+              const 조각 = await 답.blob()
+              const 주소 = URL.createObjectURL(조각)
+              const a = document.createElement('a')
+              a.href = 주소; a.download = `persona.${계정 || 'main'}.json`
+              document.body.appendChild(a); a.click(); a.remove()
+              URL.revokeObjectURL(주소)
+              알림담기('내려받았습니다 — 마지막으로 「말투 저장」한 내용입니다. ✓')
+            } catch { 알림담기('말투 파일을 못 받았습니다. 잠시 뒤 다시 눌러 보세요.') }
+          }}
           className="rounded-lg border border-primary/35 bg-transparent text-primary transition-colors hover:bg-primary/10 px-3.5 py-2 text-sm font-semibold">
           말투 파일 내려받기
         </a>

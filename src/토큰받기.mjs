@@ -1,5 +1,6 @@
 // threads-login.mjs 의 토큰 교환·검증을 함수로 뽑았다 + 크롬 프로필로 코드를 받는 자동발급(Task 2 에서 완성)
 
+import './그물.mjs'   // IPv6 헛디딤 막기 (부수 효과) — 왜인지는 그 파일 머리에 있다
 import { join } from 'node:path'
 import { 계정열쇠읽기 } from './감시모음.mjs'
 import { 열쇠저장 } from './화면엔진.mjs'

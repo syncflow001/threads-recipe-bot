@@ -68,7 +68,14 @@ const 만드는법머리 = /^\s*(?:[👩🧑🍳👨]|#{0,3}\s*(?:instructions?|
 //     「* 5–6 tbsp secret ingredient」 ← **재료 줄에 정체 없이 들어간다. 한국어 「킥소스」와 같은 꼴이다**
 //   · 밝히는 쓰임도 섞인다 (「the secret ingredient really is love」). 그건 잡담이라 재료 줄에 안 온다
 // 그래서 낱말은 그대로 둔다. 일본어와 갈린 자리다 — 일본어는 밝히는 쓰임이 압도적이라 걷어냈다
-export const 별명꼴 = /\b(secret (?:ingredient|sauce|weapon|seasoning)|magic ingredient|my secret|that one ingredient)\b|㊙️|🤫/i
+export // 우리가 **일부러** 감춘 재료 줄을 알아보는 그물. 링크가 이 줄 바로 밑에 붙어야 한다.
+// ⚠️ **영어권은 아직 실측이 없다.** 한국(64%)·일본(26편 전부)에서 확인된 장치를 옮겨 둔 것이다.
+//    영어 계정 셋은 제휴가 「없음」이라 링크가 안 붙어 지금은 아무 영향이 없다.
+//    제휴를 붙이기 전에 영어권 요리 계정을 걷어 이 수법을 쓰는지 재야 한다 (CHECKLIST)
+const 감춘꼴 = /^\s*[-*·]?\s*[Tt][Hh][Ii][Ss](?=\s|$)/
+const 감춘말 = 'this'
+
+const 별명꼴 = /\b(secret (?:ingredient|sauce|weapon|seasoning)|magic ingredient|my secret|that one ingredient)\b|㊙️|🤫/i
 
 // 깨진 분량을 잡는 그물. 단위 목록에 기대지 않는 것이 핵심이다 — 깨진 글자는 목록에 없다.
 // 한국어 팩의 `숫자+한글` 과 같은 자리다
@@ -99,7 +106,12 @@ const 출력지시 = [
   'the author\'s ad hidden behind a link, and the ingredients are already complete without it.',
   'If you do know what it is, write it into the ingredients under its real name.',
   'If you know what the 비밀재료 is, make it the 핵심재료. If not, pick from the remaining ingredients.',
-  'The 한줄소개 is one short line recommending that 핵심재료 to a friend. It sits right above the link.',
+  // ⚠️ 2026-09-02 — changed from "a line recommending it" to "a blind". Same as the Korean pack
+  'The 한줄소개 is a **blind** — one short tag that sits right above the link. Not a sentence.',
+  '**Never write the name of the 핵심재료 here.** Only make people wonder what it is —',
+  'if you name it, there is no reason to click.',
+  '**Keep it under 30 characters.** It is a tag, not a sentence.',
+  'e.g. "👇 this is the whole trick 👇"',
   'Give one reason to use it. Write it in your own voice.',
   'Do not write product names, prices, or brands. If there is no 핵심재료, leave it as an empty string.',
 ]
@@ -108,7 +120,18 @@ const 부가글지시 = [
   '[Ingredients] Write the amount for every ingredient. Copy the amounts exactly as the source wrote them.',
   'If the source gives no amount for an ingredient, write the name alone. Do not make one up.',
   '[Units] tbsp is 15ml and tsp is 5ml — three times apart. Never change whichever the source used.',
-  '[Paragraphs] Put a blank line between the ingredients and the steps. They are posted separately.',
+  // ⚠️ Keep the blank line — 링크넣기(compose.mjs) splits on it to find ingredients vs steps.
+  //    But "posted separately" has been false since 2026-09-02. The reply goes out as one
+  '[Paragraphs] Put a blank line between the ingredients and the steps.',
+  '**Both go inside one single reply.** Do not split them across replies.',
+  // ⚠️ 2026-09-02 — 한국(64%)·일본(26편 전부)에서 확인된 장치다. **영어권은 아직 안 재 봤다.**
+  //    영어 계정 셋은 제휴가 「없음」이라 링크가 안 붙어 지금은 아무것도 안 나간다.
+  //    제휴를 붙이기 전에 영어권 요리 계정을 걷어 이 수법을 쓰는지 실측해야 한다 (CHECKLIST)
+  '[Hide the 핵심재료] In the ingredient list, write **only the 핵심재료 line** as "this" instead of its name.',
+  'Keep the amount (e.g. if the 핵심재료 is heavy cream, write "this 200ml", not "heavy cream 200ml").',
+  '**Every other ingredient keeps its real name.** You hide exactly one.',
+  '**Call it "this" in the steps too.** Never write its real name anywhere.',
+  'Keep the amount there as well (e.g. "pour in this 200ml") so people can still cook it.',
 ]
 
 const 규칙 = ['- Do not invent. Never add an ingredient or amount that is not in the source; if unsure, leave it out.']
@@ -152,10 +175,12 @@ const 말투서식 = {
   ],
   '쓰지 말 것': ['mentioning the original author or where it came from', 'stating prices as fact — they change'],
   '본문 길이': '4 to 5 lines, including the closing line that points to the recipe',
-  '본문 이모지': 'one at the end. Pick one that fits the dish.',
-  '레시피 길이': '25 lines or fewer, ingredients and steps together',
+  // ⚠️ 2026-09-02 저녁 — 「본문 이모지」를 여기서 뺐다. 사용자가 정했다 —
+  //    「문장 구조는 팩이, **말투·이모티콘·무엇을 쓸지는 계정**이 정한다」.
+  //    이모지 취향은 계정마다 다르다 (하트 하나 / 한두 개 / 두세 개). persona.json 이 갖는다
+  '레시피 길이': '**17 lines and 340 characters or fewer**, ingredients and steps together. If it runs long, cut the tips first',
   '레시피 규칙': 'Ingredients, amounts, and the cooking method that matters stay as the source wrote them. Do not change or add anything — only tidy it up so it reads well. Leave blank whatever the source does not say.',
-  '레시피 형식': 'First line is "emoji **Dish Name**". Then "🛒 Ingredients" with one ingredient per line. Then "🍳 Instructions" with steps numbered 1️⃣2️⃣3️⃣.',
+  '레시피 형식': 'First line is "emoji Dish Name". Then "🛒 Ingredients" with one ingredient per line. Then "🍳 Instructions" with steps numbered 1️⃣2️⃣3️⃣. **Write it all as one block — do not split ingredients away from the steps.** It must all fit in a single reply.',
 }
 
 const 마법사안내 = {
@@ -185,6 +210,8 @@ export default {
   촘촘단위꼴,
   만드는법머리,
   별명꼴,
+  감춘꼴,
+  감춘말,
   지울꼴,
   // 영어도 어림말(`to taste`)에 많이 기대서 숫자 분량은 둘이면 된다
   숫자최소: 2,

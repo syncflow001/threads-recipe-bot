@@ -1,4 +1,5 @@
 // 내가 올린 글의 성적을 정기적으로 찍어 쌓는다 — 스레드는 과거 값을 안 주므로 안 찍으면 영영 못 채운다
+import './그물.mjs'   // IPv6 헛디딤 막기 (부수 효과) — 왜인지는 그 파일 머리에 있다
 import { readFile, readdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import { 안전쓰기 } from './장부쓰기.mjs'

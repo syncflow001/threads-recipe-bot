@@ -15,7 +15,7 @@
 
 import { readFile, writeFile, unlink } from 'node:fs/promises'
 import { 안전쓰기 } from './장부쓰기.mjs'
-import { 계정길 } from './계정.mjs'
+import { 계정길, 전체자리이름 } from './계정.mjs'
 import { join } from 'node:path'
 import { 쿠키풀기, 쿠키죽음 } from './홈수집.mjs'
 import { 장부적기, 장부읽기, 오늘 } from './교류하기.mjs'
@@ -161,7 +161,10 @@ if (process.argv[1]?.endsWith('팔로우하기.mjs')) {
 //   하루 두 명. 사람이 더블클릭할 때만 (「잘못한 팔로잉 풀기.command」). 시각표에 안 건다
 
 // 주인을 모르는 옛 팔로우 줄. 어느 계정이 눌렀는지 기록이 없어 계정 파일에 못 넣는다
-export const 주인모름길 = (뿌리 = process.cwd()) => join(뿌리, '팔로우장부.주인모름.json')
+// ⚠️ 2026-09-01 — 뿌리에 있던 것을 계정/_전체/ 로 옮겼다. 여기가 옛 자리를 보면
+//    읽기가 조용히 빈 목록이 되고, 풀기한판 이 「다 끝났습니다」라고 거짓 보고를 한다
+export const 주인모름길 = (뿌리 = process.cwd()) =>
+  join(뿌리, 계정길(전체자리이름, '팔로우장부.주인모름.json'))
 export const 주인모름읽기 = async (뿌리 = process.cwd()) =>
   readFile(주인모름길(뿌리), 'utf8').then(JSON.parse).catch(() => []).then((v) => (Array.isArray(v) ? v : []))
 

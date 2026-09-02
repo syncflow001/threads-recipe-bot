@@ -17,8 +17,10 @@ export const GET = 감싸기(async (req: NextRequest) => {
     status: 200,
     headers: {
       'Content-Type': 'application/json; charset=utf-8',
-      // 계정 이름은 영숫자·점뿐이라(src/계정.mjs 이름꼴) 파일 이름에 그대로 써도 안전하다
-      'Content-Disposition': `attachment; filename="${이름}"`,
+      // ⚠️ 이름은 `계정/<계정>/persona.json` 이라 **한글이 들어 있다.** HTTP 헤더는 ByteString 이라
+      //    한글을 넣으면 500 이 난다 (2026-08-29 폴더 개편 뒤로 이 길이 죽어 있었다).
+      //    계정 이름은 영숫자·점뿐이므로(src/계정.mjs 이름꼴) 이렇게 조립하면 안전하다
+      'Content-Disposition': `attachment; filename="persona.${r.계정 || 'main'}.json"`,
       'Cache-Control': 'no-store',
     },
   })

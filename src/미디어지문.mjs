@@ -161,9 +161,15 @@ export function 다른비트수(가, 나) {
 }
 
 // 한 글의 미디어 폴더를 통째로 훑어 지문을 만든다
-export async function 지문만들기(폴더) {
+// `볼것` 을 주면 그 파일들만 잰다. 엿보기가 **방금 받은 한 장**만 보려고 쓴다 —
+// 폴더를 통째로 재면 지난 판이 남긴 파일까지 섞인다 (2026-08-31 검수)
+export async function 지문만들기(폴더, { 볼것 } = {}) {
   let 이름들 = []
   try { 이름들 = (await readdir(폴더)).filter(볼파일) } catch { return { 바이트: [], 그림: [], 소리: [] } }
+  if (볼것) {
+    const 고를것 = new Set([볼것].flat())
+    이름들 = 이름들.filter((n) => 고를것.has(n))
+  }
   const 바이트 = []
   const 그림 = []
   const 소리 = []

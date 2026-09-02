@@ -14,7 +14,7 @@ echo "" >> "$LOG"
 echo "═══ 점검 $(date '+%Y-%m-%d %H:%M:%S') ═══" >> "$LOG"
 
 # 열쇠는 첫 계정 것을 쓴다. 텔레그램 열쇠가 거기 있다
-"$NODE" --env-file="$HOME_DIR/.env.local" "$HOME_DIR/점검돌기.mjs" >> "$LOG" 2>&1
+"$NODE" --env-file="$HOME_DIR/.env.local" "$HOME_DIR/src/점검돌기.mjs" >> "$LOG" 2>&1
 CODE=$?
 [ $CODE -ne 0 ] && echo "‼️  점검이 실패했습니다 (종료코드 $CODE)" >> "$LOG"
 exit $CODE

@@ -1,4 +1,5 @@
 // 팔로워 수를 날마다 한 줄씩 쌓는다 — 목적이 계정을 키우는 것이라 이 숫자가 성적표다
+import './그물.mjs'   // IPv6 헛디딤 막기 (부수 효과) — 왜인지는 그 파일 머리에 있다
 import { readFile } from 'node:fs/promises'
 import { 계정길 } from './계정.mjs'
 import { join } from 'node:path'

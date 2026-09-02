@@ -1,4 +1,5 @@
 // 쿠팡파트너스 오픈 API — 상품을 찾고 글마다 다른 꼬리표를 붙인 제휴 링크를 발급한다
+import './그물.mjs'   // IPv6 헛디딤 막기 (부수 효과) — 왜인지는 그 파일 머리에 있다
 import { createHmac } from 'node:crypto'
 
 const HOST = 'https://api-gateway.coupang.com'

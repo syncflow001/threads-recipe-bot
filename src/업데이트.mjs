@@ -1,4 +1,5 @@
 // 공개 저장소 최신 판을 받아 코드·문서만 덮는다. 장부·열쇠·미디어·프로필은 절대 안 덮는다
+import './그물.mjs'   // IPv6 헛디딤 막기 (부수 효과) — 왜인지는 그 파일 머리에 있다
 import { execFile } from 'node:child_process'
 import { copyFile, mkdir, mkdtemp, readdir, readFile, stat, unlink, writeFile } from 'node:fs/promises'
 import { homedir, tmpdir } from 'node:os'
@@ -200,7 +201,11 @@ export async function 업데이트하기({
 } = {}) {
   // 제작자 저장소에는 공개판 올리기 도구가 있다. 여기서 자기를 덮으면 작업 중인 것이 날아간다.
   // 깃허브를 부르기도 전에, 기록도 남기지 않고 그냥 돌아선다
-  if (await stat(join(뿌리, '도구.공개판올리기.mjs')).catch(() => null)) {
+  // ⚠️ 2026-09-01 — 도구를 도구/ 폴더로 옮겼다. 여기가 옛 이름을 보면 표시를 못 찾아
+  //    **제작자 저장소가 자기를 덮는다.** 옛 이름도 함께 본다 — 아직 안 옮긴 사본이 있을 수 있다
+  const 제작자표시 = await Promise.all(['도구/공개판올리기.mjs', '도구.공개판올리기.mjs']
+    .map((길) => stat(join(뿌리, 길)).then(() => true).catch(() => false)))
+  if (제작자표시.some(Boolean)) {
     return { 됨: false, 까닭: '제작자 저장소에서는 자동 업데이트를 하지 않아요.' }
   }
 

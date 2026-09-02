@@ -1,5 +1,6 @@
 // 사람이 손대야 할 일을 텔레그램으로 알린다 — 쿠키 만료처럼 두면 계속 멈춰 있는 것만 보낸다
 
+import './그물.mjs'   // IPv6 헛디딤 막기 (부수 효과) — 왜인지는 그 파일 머리에 있다
 import { readFile, writeFile } from 'node:fs/promises'
 
 export const 기본기록 = 'logs/알림기록.json'

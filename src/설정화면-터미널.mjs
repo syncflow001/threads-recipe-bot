@@ -3,6 +3,7 @@
 // 문은 둘이다. 대시보드 열쇠말(모두가 지나는 문) + 이 맥의 로그인 비밀번호(이 칸만의 문).
 // 비밀번호는 맥에게 물어만 보고(dscl) 어디에도 안 적는다. 맞으면 통행증 쿠키만 남긴다.
 // 창 하나 = 파이썬 껍데기(터미널껍데기.py) 하나 = pty 하나 = zsh 하나.
+import './그물.mjs'   // IPv6 헛디딤 막기 (부수 효과) — 왜인지는 그 파일 머리에 있다
 import { spawn } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
 import { userInfo } from 'node:os'
