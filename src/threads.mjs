@@ -118,11 +118,26 @@ export async function 프로필읽기(작성자, opts) {
     const n = Number(html.match(/"follower_count"\s*:\s*(\d+)/)?.[1] ?? NaN)
     return {
       팔로워: Number.isFinite(n) ? n : null,
+      소개: 소개뽑기(html),
       글들: 게시물뽑기(html).filter((p) => p.작성자 === 작성자),
     }
   } catch {
-    return { 팔로워: null, 글들: [] } // 못 받으면 확산을 안 매긴다. 지어내지 않는다
+    return { 팔로워: null, 소개: null, 글들: [] } // 못 받으면 확산을 안 매긴다. 지어내지 않는다
   }
+}
+
+// 프로필 소개문구(bio). 말투 카드의 「나를 한 줄로」가 이것을 그대로 끌어다 쓴다 —
+// 페르소나가 실제 계정 소개와 어긋나 「20대 싱글」 계정이 「3040 주부」 말투로 나가던 일이 있었다.
+// ⚠️ **값이 하나일 때만 믿는다.** 프로필 문서에는 추천 계정도 섞여 들어와서, 둘 이상 나오면
+// 우리가 잘못 읽은 것이다 — 남의 소개를 내 정체성으로 박느니 비워 두는 게 낫다 (`쿠키주인` 과 같은 규칙).
+// 줄바꿈은 공백 하나로 접는다. 「한 줄로」 칸이고, 프롬프트에도 한 줄로 나간다
+export function 소개뽑기(html) {
+  const 것들 = [...new Set([...String(html ?? '').matchAll(/"biography":("(?:[^"\\]|\\.)*")/g)].map((m) => m[1]))]
+  if (것들.length !== 1) return null
+  try {
+    const 글 = JSON.parse(것들[0]).replace(/\s+/g, ' ').trim()
+    return 글 || null
+  } catch { return null }
 }
 
 export async function 팔로워수(작성자, opts) {

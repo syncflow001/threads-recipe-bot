@@ -22,6 +22,9 @@ const 정리된뜻 = (뜻?: 뜻자료 | null): 뜻자료 => (뜻 && (뜻.정체�
 export function 말투() {
   const 계정 = use계정()
   const 상태 = use자료<상태자료>('/status')
+  // 스레드에 적어 둔 프로필 소개문구. 「나를 한 줄로」가 이것을 그대로 따라간다 (2026-09-03 사용자 요청) —
+  // 페르소나와 실제 계정 소개가 어긋나 「20대 싱글」 계정이 「3040 주부」 말투로 나가던 일이 있었다
+  const { data: 소개자료 } = use자료<{ 소개: string | null }>('/profile-bio')
 
   const [정체성, 정체성담기] = useState('')
   const [말투값, 말투값담기] = useState('')
@@ -39,7 +42,10 @@ export function 말투() {
   // 서버 값으로 채운다. 계정이 바뀌면 앞 계정 흔적을 지우고 다시 채운다(옛 그리기(s) 2383~2436)
   useEffect(() => {
     const m = 상태.data?.말투
-    정체성담기(m?.정체성 || '')
+    // ⚠️ **소개문구가 읽히면 그것이 이긴다.** 두 곳에 따로 적으면 언젠가 어긋난다 —
+    // 사람이 스레드에 직접 적은 소개가 정본이다. 못 읽었으면 저장된 값을 그대로 쓴다.
+    // 덮는 것은 **화면 칸뿐**이다. 「말투 저장」을 눌러야 파일이 바뀐다
+    정체성담기(소개자료?.소개 || m?.정체성 || '')
     말투값담기(m?.말투 || '')
     표현담기(m?.표현 || '')
     이모지담기(m?.이모지 || '')
@@ -48,7 +54,7 @@ export function 말투() {
     뜻담기(정리된뜻(m?.뜻))
     알림담기('')
     샘플결과담기(null)
-  }, [계정, 상태.data])
+  }, [계정, 상태.data, 소개자료])
 
   const 지금카드 = (): 카드값 => ({ 정체성, 말투: 말투값, 표현, 예시: 예시.filter((v) => v.trim()) })
 
@@ -127,6 +133,7 @@ export function 말투() {
   if (계정 === null || !상태.data) return <카드 제목="말투">불러오는 중…</카드>
 
   const 그언어 = 상태.data.정보?.언어 ?? '한국어'
+  const 저장된정체성 = 상태.data?.말투?.정체성 ?? ''
   const 한글있나 = /[가-힣]/.test(`${정체성} ${표현}`)
   const 말투경고보임 = 그언어 !== '한국어' && 한글있나
 
@@ -145,10 +152,26 @@ export function 말투() {
         </div>
       )}
       <말투추천 onApply={추천적용} 초기화신호={계정} />
-      <label className="mb-1 block text-sm font-medium">나를 한 줄로</label>
+      <label className="mb-1 block text-sm font-medium">
+        나를 한 줄로{' '}
+        <span className="font-normal text-muted-foreground">
+          — 스레드 <b>프로필 소개문구</b>가 자동으로 입력됩니다
+        </span>
+      </label>
       <input value={정체성} onChange={(e) => 정체성담기(e.target.value)}
         placeholder="30대 직장인. 퇴근하고 해먹는 집밥 계정"
         className="mb-1 w-full rounded-lg border px-2.5 py-1.5 text-sm" />
+      {/* 화면 칸만 덮었을 뿐 파일은 그대로다. 무엇이 바뀌는지 눌러 보기 전에 알려 준다 */}
+      {소개자료?.소개 && 저장된정체성 && 저장된정체성 !== 정체성 && (
+        <div className="mb-2 text-xs text-muted-foreground">
+          지금 저장된 것은 <b>{저장된정체성}</b> 입니다. 「말투 저장」을 눌러야 바뀝니다.
+        </div>
+      )}
+      {소개자료 && !소개자료.소개 && (
+        <div className="mb-2 text-xs text-muted-foreground">
+          프로필 소개문구를 못 읽어 저장된 값을 그대로 뒀습니다. 스레드 프로필에 소개를 적어 두셨는지 봐 주세요.
+        </div>
+      )}
       {뜻?.정체성 && <div className="mb-2 text-xs text-muted-foreground"><b>뜻</b> {뜻.정체성}</div>}
       <label className="mb-1 block text-sm font-medium">말투</label>
       <textarea value={말투값} onChange={(e) => 말투값담기(e.target.value)}

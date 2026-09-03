@@ -17,12 +17,20 @@ export function 발행시각() {
   const 계정 = use계정()
   const { data } = use자료<시각표>('/schedule')
   const { data: 링크, refetch: 링크다시읽기 } = use자료<{ 켜짐: boolean }>('/link')
+  // 계정별 발행 시각을 얼마나 벌릴지. 계정마다가 아니라 이 맥 전체의 규칙이라 계정을 안 딸려 보낸다
+  const { data: 간격자료, refetch: 간격다시읽기 } = use자료<{ 분: number }>('/schedule/gap', { 계정무관: true })
   const [고른칸들, 고른칸들담기] = useState<시각칸[]>([])
   const [알림, 알림담기] = useState<ReactNode>('')
   const [종류, 종류담기] = useState<'좋음' | '나쁨' | undefined>()
   const [바쁨, 바쁨담기] = useState(false)
+  const [고른간격, 고른간격담기] = useState<number | null>(null)
+  const [간격알림, 간격알림담기] = useState('')
+  const 간격시계 = useRef<ReturnType<typeof setTimeout> | null>(null)
   const 마지막본계정 = useRef<string | null>(null)
   const 다시그리기 = use다시그리기()
+
+  // 저장 알림은 3초 뒤에 스스로 사라진다. 화면을 떠나면 시계를 치운다 — 없어진 칸에 글을 쓰면 안 된다
+  useEffect(() => () => { if (간격시계.current) clearTimeout(간격시계.current) }, [])
 
   // 화면에 담긴 것이 없으면 지금 시각표를 그대로 보여 준다 (고치다 만 것을 덮지 않는다)
   useEffect(() => {
@@ -32,6 +40,8 @@ export function 발행시각() {
     고른칸들담기((data.칸들 ?? []).map((c) => ({ ...c })))
   }, [data, 계정]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // 사람이 아직 안 건드렸으면 저장된 값을 보여 준다. 건드린 뒤에는 그 손을 덮지 않는다
+  const 간격 = 고른간격 ?? 간격자료?.분 ?? 20
   const 켜짐 = !!data?.시각들?.length
   const 남의칸들 = data?.남들 ?? []
   const 기본분 = data?.추천분 ?? data?.분 ?? 0
@@ -46,10 +56,11 @@ export function 발행시각() {
   const 자동배정 = async () => {
     바쁨담기(true)
     try {
-      const r = await 부르기<{ 칸들: 시각칸[]; 밀림: { 바란시: number; 시: number }[] }>('/schedule/auto', { 이미: 고른칸들 })
+      const r = await 부르기<{ 칸들: 시각칸[]; 밀림: { 바란시: number; 시: number }[]; 간격?: number }>(
+        '/schedule/auto', { 이미: 고른칸들 })
       고른칸들담기(r.칸들)
       알림담기(
-        '다른 계정과 20분 이상 떨어진 자리로 채웠어요. 「자동 발행 켜기」를 누르면 그때부터 돌아요.' +
+        `다른 계정과 ${r.간격 ?? 간격}분 이상 떨어진 자리로 채웠어요. 「자동 발행 켜기」를 누르면 그때부터 돌아요.` +
         (r.밀림 ?? []).map((m) => ` ${m.바란시}시는 자리가 없어 ${m.시}시로 옮겼어요.`).join(''),
       )
       종류담기('좋음')
@@ -94,6 +105,19 @@ export function 발행시각() {
         : '이제 링크 없이 올려요. [광고] 표시와 대가성 문구도 안 붙어요.')
       종류담기('좋음')
     } catch (err) { 알림담기((err as Error).message); 종류담기('나쁨') }
+  }
+
+  const 간격저장 = async () => {
+    바쁨담기(true)
+    try {
+      const r = await 부르기<{ 분: number }>('/schedule/gap', { 분: 간격 })
+      await 간격다시읽기()
+      고른간격담기(r.분)
+      간격알림담기(`${r.분}분 간격으로 저장되었습니다.`)
+      if (간격시계.current) clearTimeout(간격시계.current)
+      간격시계.current = setTimeout(() => 간격알림담기(''), 3000)
+    } catch (err) { 알림담기((err as Error).message); 종류담기('나쁨') }
+    finally { 바쁨담기(false) }
   }
 
   const 끄기 = async () => {
@@ -156,6 +180,31 @@ export function 발행시각() {
           aria-label="제휴 링크 넣기 켜고 끄기"
         />
       </div>
+      <div className="mt-3 rounded-lg border bg-muted/40 px-3 py-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <label htmlFor="발행간격" className="text-sm font-semibold">계정별 발행시각 간격</label>
+          <select
+            id="발행간격"
+            className="rounded-lg border bg-background px-2 py-1.5 text-sm"
+            value={간격}
+            disabled={바쁨 || !간격자료}
+            onChange={(e) => 고른간격담기(Number(e.target.value))}
+          >
+            {Array.from({ length: 59 }, (_, i) => i + 1).map((분) => (
+              <option key={분} value={분}>{분}분</option>
+            ))}
+          </select>
+          <button type="button" className={단추} disabled={바쁨 || !간격자료} onClick={간격저장}>저장</button>
+          {/* 3초 뒤에 스스로 사라진다. 알림줄과 따로 두는 까닭은 그것이 안 사라지기 때문이다 */}
+          {간격알림 ? <span className="text-sm font-semibold text-primary">{간격알림}</span> : null}
+        </div>
+        <p className="mt-1 text-[0.82rem] text-muted-foreground">
+          「자동 배정」이 이만큼 벌려서 자리를 잡습니다. 고른 시(9시·12시 …) 안에서
+          이미 예약된 계정과 이 간격만큼 떨어진 <b>가장 빠른 분</b>에 넣고,
+          그 시가 꽉 찼으면 다음 시로 밉니다.
+        </p>
+      </div>
+
       <알림줄 글={알림} 종류={종류} />
     </카드>
   )

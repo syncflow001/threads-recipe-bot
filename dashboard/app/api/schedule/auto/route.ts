@@ -9,7 +9,9 @@ export const POST = 감싸기(async (req: NextRequest) => {
   const r = await 계정에서(req); if (r instanceof Response) return r
   const b = await 몸통(req)
   const { 발행격자 } = await 엔진('대시보드')
-  const { 자동배정 } = await 엔진('시각배정')
+  const { 자동배정, 간격읽기 } = await 엔진('시각배정')
   const { 남들 } = await 발행격자(r.계정)
-  return 응답(자동배정({ 남들, 이미: b.이미 ?? [] }))
+  // 얼마나 벌릴지는 사용자가 화면에서 정한다 (설정 → 발행 시각 카드 맨 아래)
+  const 간격 = await 간격읽기()
+  return 응답({ ...자동배정({ 남들, 이미: b.이미 ?? [], 간격 }), 간격 })
 })

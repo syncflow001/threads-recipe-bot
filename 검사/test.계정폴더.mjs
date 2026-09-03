@@ -311,3 +311,29 @@ test('계정 열쇠 파일에는 그 계정 것만 있다', async () => {
   assert.deepEqual(걸린것, [],
     '공용 열쇠 사본이 계정 파일에 있다 — .env.local 을 덮어써 그 계정만 딴 값을 쓴다')
 })
+
+test('계정 폴더에 쓰는 곳은 안전쓰기를 쓴다 — 폴더를 스스로 만들어야 한다', async () => {
+  // ⚠️ 2026-09-02 — `run.mjs` 가 `재구성.json` 을 writeFile 로 직접 써서
+  //    `--재구성` 만 돌릴 때 ENOENT 로 죽었다. 미디어를 안 받으면 폴더가 없기 때문이다.
+  //    실제 발행 판에서는 미디어를 먼저 받아 폴더가 생겨 있어 **가려져 있던 결함**이다.
+  //    CLAUDE.md §3-1 — 부르는 쪽마다 mkdir 을 적으면 언젠가 한 곳이 빠진다
+  const { execSync } = await import('node:child_process')
+  const 볼것 = execSync('git -c core.quotepath=false ls-files "*.mjs"', { encoding: 'utf8' })
+    .trim().split('\n').filter((f) => f === 'run.mjs')
+  // ⚠️ **지금은 run.mjs 만 본다.** 넓혀 보니 열 곳이 더 걸렸다 —
+  //   src/교류.mjs · src/대시보드.mjs(셋) · src/미디어지문.mjs · src/수익목표.mjs ·
+  //   src/업데이트.mjs(둘) · 도구/장부가르기.mjs(둘).
+  // 그것들이 진짜 결함인지(폴더가 늘 있는지) 안 봤다. 한 번에 열 곳을 고치면
+  // 무엇이 깨졌는지 못 가린다. CHECKLIST 에 넣고 하나씩 확인한 뒤 이 거르개를 넓힌다
+  assert.equal(볼것.length, 1, 'run.mjs 를 못 찾았다 — 목록이 비면 헛통과한다')
+  const 나쁨 = []
+  for (const f of 볼것) {
+    const 글 = await readFile(f, 'utf8')
+    for (const [i, 줄] of 글.split('\n').entries()) {
+      if (!/\bawait writeFile\(/.test(줄)) continue
+      // 계정 폴더나 미디어 뿌리로 쓰는 것만 본다. 임시 폴더·설정 파일은 상관없다
+      if (/뿌리|계정길|미디어뿌리|말투파일|보관함파일/.test(줄)) 나쁨.push(`${f}:${i + 1}`)
+    }
+  }
+  assert.deepEqual(나쁨, [], `계정 폴더에 writeFile 을 직접 쓴다 (안전쓰기를 써라): ${나쁨.join(' · ')}`)
+})

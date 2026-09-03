@@ -90,13 +90,21 @@ export async function 주제붙이기(창, 쪽, 말) {
   // 한 글자씩 친다 — 붙여넣기로는 후보 목록이 안 뜬다
   await 쪽.keyboard.type(말, { delay: 90 })
   await 쪽.waitForTimeout(1500)
-  // 뜬 후보 가운데 **딱 그 말인 것**을 고른다. 「광고대행사」 같은 것이 섞여 있다
-  const 후보 = 창.getByRole('option', { name: 말, exact: true }).first()
-    .or(창.getByText(말, { exact: true }).last())
-  if (!(await 후보.count())) return `후보에 「${말}」 가 없다`
-  await 후보.click()
-  await 쪽.waitForTimeout(800)
-  return `「${말}」 달았다`
+
+  // ⚠️ **후보 목록은 창 밖(포털)에 그려진다** (2026-09-03 실측 — 창 안의 `[role=option]` 은 0개고,
+  // 「광고·광고대행사·광고촬영…」은 document 아래 딴 자리에 있다). 창 안에서만 찾던 옛 코드는
+  // 엉뚱한 것을 집어 30초를 기다리다 죽었다.
+  // 눌러 주면 깔끔하지만 **못 눌러도 실패가 아니다** — 스레드는 친 글자 그대로를 주제로 받는다
+  const 후보 = 쪽.locator('[role="option"], [role="listbox"] [role="button"]')
+    .filter({ hasText: new RegExp(`^${말}$`) }).first()
+  await 후보.click({ timeout: 4000 }).catch(() => {})
+  await 쪽.waitForTimeout(600)
+
+  // ⚠️ **판정은 「칸에 그 말이 들어갔나」로 한다. 누르기 성공으로 재면 안 된다** —
+  // 누르기가 죽은 판에서도 글에는 「광고」가 멀쩡히 붙어 있었다 (2026-09-03 실측).
+  // 늘 빨간불인 신호는 신호가 아니다 ([[늘-빨간불인-신호는-신호가-아니다]])
+  const 들어간것 = String((await 칸.inputValue().catch(() => '')) || (await 칸.innerText().catch(() => ''))).trim()
+  return 들어간것 === 말 ? `「${말}」 달았다` : `칸에 안 들어갔다 (지금 값 "${들어간것}")`
 }
 
 export async function 브라우저로답글달기({
@@ -191,7 +199,13 @@ export async function 브라우저로답글달기({
     if (못찾은것.length) {
       throw new Error(`답글 ${못찾은것.length}조각이 화면에 안 보인다 (${못찾은것.map((v) => `${v.번 + 1}번째`).join(', ')})`)
     }
-    return { 올린조각수: 조각들.length, 카드결과 }
+    // ⚠️ **주제결과를 반드시 돌려준다** (2026-09-03 실측으로 찾았다).
+    // 위에서 재 놓고 여기서 안 돌려줘서 `publish.mjs` 의 `r.주제결과` 가 늘 undefined 였고,
+    // run.mjs 의 `if (주제태그 && 주제결과 && …)` 가 통째로 안 걸렸다 —
+    // **브라우저로 나가는 모든 발행에서 「광고 표시가 안 붙었습니다」 알림이 죽어 있었다.**
+    // 광고 표시는 이 주제 태그 하나뿐이라(본문 [광고] 를 뺐다) 조용히 실패하면
+    // 광고 표시 없는 글이 남는다 ([[알림을-붙였으면-실패를-만들어-울려-본다]])
+    return { 올린조각수: 조각들.length, 카드결과, 주제결과 }
   } finally {
     await 브라우저.close()
   }

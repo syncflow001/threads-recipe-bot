@@ -6,6 +6,14 @@ import { 서식깔기, 프롬프트만들기, 도입고르기, 분야가정하�
 import { 계정팩 } from '../src/팩.mjs'
 import { 레시피서식 } from '../src/분야/요리/한국어.mjs'
 
+// ⚠️ **갓 받은 저장소에는 계정이 하나도 없다.** 그때 계정정보.json 을 그냥 읽으면 ENOENT 로
+// 검사가 통째로 죽는다 — 공개판을 내려받아 `./검사.sh` 를 돌리면 여기서 멈췄다 (2026-09-03 실측).
+// 계정이 없는 것은 고장이 아니다. 볼 것이 없을 뿐이다
+const { readFileSync: 읽기, existsSync: 있나 } = await import('node:fs')
+const 계정이름들 = () => (있나('계정정보.json')
+  ? Object.keys(JSON.parse(읽기('계정정보.json', 'utf8')))
+  : [])
+
 const 요리 = 계정팩({ 분야: '요리', 언어: '한국어', 제휴: '쿠팡파트너스' }).분야팩
 
 { // ⚠️ 요리 팩이 서식을 들고 있어야 한다. null 이면 계정마다 또 갈린다
@@ -55,8 +63,7 @@ const 요리 = 계정팩({ 분야: '요리', 언어: '한국어', 제휴: '쿠�
   // 글의 뼈대(글 구조·지켜야 할 것·쓰지 말 것)도 팩이 정한다 — 같은 언어끼리 글자 하나까지
   // 같은 복사본이었고, 두 계정(sample_salim·sample_yori)은 아예 없어 뼈대 없이 쓰고 있었다
   const 말투칸 = ['_설명', '정체성', '말투', '본문 이모지', '자주 쓰는 표현', '표현 사용 규칙', '내 글 예시', '한국어 뜻']
-  const { readFileSync: 읽기, existsSync: 있나 } = await import('node:fs')
-  for (const a of Object.keys(JSON.parse(읽기('계정정보.json', 'utf8')))) {
+  for (const a of 계정이름들()) {
     const 길 = `계정/${a}/persona.json`
     if (!있나(길)) continue
     const 딴것 = Object.keys(JSON.parse(읽기(길, 'utf8'))).filter((k) => !말투칸.includes(k))
@@ -73,8 +80,7 @@ const 요리 = 계정팩({ 분야: '요리', 언어: '한국어', 제휴: '쿠�
   // 이름 있는 칸은 서식깔기가 막지만 `말투` 는 자유 글이라 안 막힌다. 전에 여기 베껴져 있어서
   // 「본문 딱 3줄」(계정) 대 「본문 4~5줄」(팩)이 같은 프롬프트에 나란히 나갔다
   const 구조낱말 = /[0-9０-９]\s*줄|줄바꿈|빈 줄|첫 줄은|문단|답글에|글타래에|한 줄에 하나|매번 다르게 열|lines?\b|line break|first line|blank line|per line|改行|見出し|冒頭は|一行/i
-  const { readFileSync: 읽기, existsSync: 있나 } = await import('node:fs')
-  for (const a of Object.keys(JSON.parse(읽기('계정정보.json', 'utf8')))) {
+  for (const a of 계정이름들()) {
     const 길 = `계정/${a}/persona.json`
     if (!있나(길)) continue
     const 말투 = JSON.parse(읽기(길, 'utf8')).말투 ?? ''
@@ -87,11 +93,10 @@ const 요리 = 계정팩({ 분야: '요리', 언어: '한국어', 제휴: '쿠�
   const 요리한국어 = 계정팩({ 분야: '요리', 언어: '한국어', 제휴: '없음' }).분야팩
   assert.ok(!('본문 이모지' in (요리한국어.말투서식 ?? {})),
     '팩이 「본문 이모지」를 들고 있다 — 이모지는 말투 쪽이다')
-  const { readFileSync: 읽기2, existsSync: 있나2 } = await import('node:fs')
-  for (const a of Object.keys(JSON.parse(읽기2('계정정보.json', 'utf8')))) {
+  for (const a of 계정이름들()) {
     const 길 = `계정/${a}/persona.json`
-    if (!있나2(길)) continue
-    assert.ok(JSON.parse(읽기2(길, 'utf8'))['본문 이모지'], `${a} 에 「본문 이모지」 가 없다`)
+    if (!있나(길)) continue
+    assert.ok(JSON.parse(읽기(길, 'utf8'))['본문 이모지'], `${a} 에 「본문 이모지」 가 없다`)
   }
 }
 
@@ -126,17 +131,16 @@ const 요리 = 계정팩({ 분야: '요리', 언어: '한국어', 제휴: '쿠�
 }
 
 { // 실제 계정 파일에 형식 칸이 남아 있으면 안 된다 — 남아 있으면 사용자가 고쳐도 안 먹는다
-  const { readFileSync, existsSync } = await import('node:fs')
-  const 계정들 = Object.keys(JSON.parse(readFileSync('계정정보.json', 'utf8')))
+  const 계정들 = 계정이름들()
   for (const a of 계정들) {
     const 길 = `계정/${a}/persona.json`
-    if (!existsSync(길)) continue
-    const 있는것 = Object.keys(레시피서식).filter((칸) => 칸 in JSON.parse(readFileSync(길, 'utf8')))
+    if (!있나(길)) continue
+    const 있는것 = Object.keys(레시피서식).filter((칸) => 칸 in JSON.parse(읽기(길, 'utf8')))
     assert.deepEqual(있는것, [], `${a} 의 말투 파일에 형식 칸이 남아 있다: ${있는것.join(' · ')}`)
   }
   // 바탕도 마찬가지다 — 여기 남으면 **새로 만드는 계정**이 도로 물려받는다
-  if (existsSync('말투바탕.json')) {
-    const 바탕 = JSON.parse(readFileSync('말투바탕.json', 'utf8'))
+  if (있나('말투바탕.json')) {
+    const 바탕 = JSON.parse(읽기('말투바탕.json', 'utf8'))
     const 있는것 = Object.keys(레시피서식).filter((칸) => 칸 in 바탕)
     assert.deepEqual(있는것, [], `말투바탕.json 에 형식 칸이 남아 있다: ${있는것.join(' · ')}`)
   }

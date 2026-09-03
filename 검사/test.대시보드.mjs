@@ -188,18 +188,28 @@ try {
     assert.ok(절.글.startsWith('## 페이스북 앱 만들기와 스레드 연결'), 'manual 글은 그 절 제목으로 시작한다')
     console.log('manual ✓')
 
-    // schedule/auto — 파일을 안 쓰는 순수 배정이라 보내도 된다
+    // schedule/auto — 배정은 순수 함수이고 간격 설정은 **읽기만** 하므로 실서버에 보내도 된다
     const 남들자료 = await fetch(주소 + '/api/schedule?profile=&days=1', { headers: 쿠키줄 }).then((res) => res.json())
     const { 겹치나 } = await import('../src/시각배정.mjs')
     r = await fetch(주소 + '/api/schedule/auto?profile=', { method: 'POST', headers: 쿠키줄 })
     assert.equal(r.status, 200)
-    const { 칸들 } = await r.json()
+    const { 칸들, 간격 } = await r.json()
     assert.equal(칸들.length, 4)
+    // ⚠️ 분이 3의 배수라는 규칙은 없앴다 (2026-09-03) — 사용자가 간격을 1~59분으로 정하게 되면서
+    // 「설정 가능한 가장 빠른 분」을 잡도록 1분씩 훑는다. 대신 **정해진 간격**으로 견준다
+    assert.ok(간격 >= 1 && 간격 <= 59, '어느 간격으로 배정했는지 함께 돌려줘야 한다')
     for (const 칸 of 칸들) {
-      assert.equal(칸.분 % 3, 0, '분은 3의 배수')
-      for (const 남 of 남들자료.남들) assert.ok(!겹치나(칸, 남.칸들), 칸.시 + ':' + 칸.분 + ' 이 ' + 남.계정 + ' 과 겹친다')
+      assert.ok(Number.isInteger(칸.분) && 칸.분 >= 0 && 칸.분 <= 59, '분은 0~59다')
+      for (const 남 of 남들자료.남들) {
+        assert.ok(!겹치나(칸, 남.칸들, 간격), 칸.시 + ':' + 칸.분 + ' 이 ' + 남.계정 + ' 과 겹친다')
+      }
     }
-    console.log('schedule/auto ✓ 칸 ' + 칸들.length)
+    // 간격 설정 길 — **읽기만** 보낸다. 저장(POST)은 실제 파일을 바꾸므로 여기서 누르지 않는다
+    const 간격r = await fetch(주소 + '/api/schedule/gap?profile=', { headers: 쿠키줄 })
+    assert.equal(간격r.status, 200)
+    const 간격자료 = await 간격r.json()
+    assert.ok(간격자료.분 >= 1 && 간격자료.분 <= 59, '지금 간격을 1~59로 돌려준다')
+    console.log('schedule/auto ✓ 칸 ' + 칸들.length + ' · 간격 ' + 간격 + '분')
   }
 
   // ④ — 글자.ts: 옛 설정화면-html.mjs 의 돈·짧은때·날짜만 이 그대로 옮겨졌나
