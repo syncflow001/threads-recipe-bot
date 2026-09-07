@@ -16,7 +16,7 @@
 **필요한 것** — [Node.js](https://nodejs.org) 24 이상, 크롬, 스레드 계정.
 
 ```bash
-git clone https://github.com/syncflow001/threads-recipe-bot.git
+git clone https://github.com/kimleader/threads-recipe-bot.git
 cd threads-recipe-bot
 npm install
 cp .env.example .env.local

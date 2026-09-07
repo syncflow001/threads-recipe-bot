@@ -6,7 +6,7 @@
 // 그 대가로 답글마다 본문에서 이미 본 사진이 한 번 더 붙었다. 웹 화면에는 카드를 지우는
 // X 가 있어서, 사진도 카드도 없는 답글을 만들 수 있다 (설계서 §9).
 
-import { 쿠키풀기, 쿠키죽음 } from './홈수집.mjs'
+import { 쿠키풀기, 쿠키죽음, 글열기 } from './홈수집.mjs'
 import { 계정이름으로벽 } from './계정벽.mjs'
 
 // 2026-08-21 에 실제 화면에서 잰 이름표다. 스레드가 화면을 바꾸면 여기부터 다시 잰다.
@@ -104,7 +104,17 @@ export async function 주제붙이기(창, 쪽, 말) {
   // 누르기가 죽은 판에서도 글에는 「광고」가 멀쩡히 붙어 있었다 (2026-09-03 실측).
   // 늘 빨간불인 신호는 신호가 아니다 ([[늘-빨간불인-신호는-신호가-아니다]])
   const 들어간것 = String((await 칸.inputValue().catch(() => '')) || (await 칸.innerText().catch(() => ''))).trim()
-  return 들어간것 === 말 ? `「${말}」 달았다` : `칸에 안 들어갔다 (지금 값 "${들어간것}")`
+  if (들어간것 === 말) return `「${말}」 달았다`
+  // ⚠️ **못 달았어도 답글은 나간다 — 다만 엉뚱한 주제를 달고 나가지는 않는다** (2026-09-07, 사용자가 정했다).
+  //    「광고」 표시가 없어도 답글 안의 대가성 문구가 있으면 표기는 갖춰진 것이다.
+  //    그런데 「광고대행사」처럼 딴 말이 반쯤 들어간 채로 올리면 그 주제로 나간다 — 칸을 비우고 나간다.
+  //    비우기가 안 돼도 던지지 않는다. 글이 올라가는 것이 먼저다
+  if (들어간것) {
+    try { await 칸.fill('') } catch {
+      try { await 칸.click(); await 쪽.keyboard.press('Meta+A'); await 쪽.keyboard.press('Backspace') } catch { /* 비우기도 덤이다 */ }
+    }
+  }
+  return `칸에 안 들어갔다 (지금 값 "${들어간것}") — 주제 없이 올린다`
 }
 
 export async function 브라우저로답글달기({
@@ -135,7 +145,7 @@ export async function 브라우저로답글달기({
     const 판 = await 브라우저.newContext({ viewport: { width: 1280, height: 1200 }, locale: 'ko-KR' })
     await 판.addCookies(쿠키풀기(쿠키))
     const 쪽 = await 판.newPage()
-    await 쪽.goto(주소, { waitUntil: 'domcontentloaded', timeout: 45000 })
+    await 글열기(쪽, 주소)
     await 쪽.waitForTimeout(4000)
 
     // 쿠키가 죽어도 로그인 화면이 안 뜬다 (실측). '있어야 할 것' 으로 판정한다 —
@@ -189,7 +199,7 @@ export async function 브라우저로답글달기({
     // 9초로는 실제로 붙은 댓글을 「안 보인다」고 했다 (2026-08-26, 즈보라 실측). 헛경보는 초안을 두 번 올리게 한다
     let 못찾은것 = []
     for (const 번째 of [1, 2, 3]) {
-      await 쪽.goto(주소, { waitUntil: 'domcontentloaded', timeout: 45000 })
+      await 글열기(쪽, 주소)
       await 쪽.waitForTimeout(번째 === 1 ? 5000 : 번째 === 2 ? 9000 : 20000)
       const 글자 = (await 쪽.evaluate(() => document.body.innerText)).replace(/\s+/gu, '')
       못찾은것 = 조각들.map((조각, 번) => ({ 번, 표: 확인표(조각) })).filter(({ 표 }) => !글자.includes(표))

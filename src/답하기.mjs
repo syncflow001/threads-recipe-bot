@@ -1,7 +1,7 @@
 // 내 글에 달린 남의 댓글에 하트를 누르고 답글을 단다 — 내 글·레시피에 답이 있으면 그걸로, 없으면 웹을 찾아서
 import { 물어보기 } from './모델.mjs'
 import { 안전쓰기 } from './장부쓰기.mjs'
-import { 홈에서걷기 } from './홈수집.mjs'
+import { 홈에서걷기, 글열기 } from './홈수집.mjs'
 import { 브라우저로답글달기 } from './브라우저답글.mjs'
 import { 하트누르기, 장부읽기, 장부적기, 오늘, 초안신선한가 } from './교류하기.mjs'
 import { 사람처럼, 사람깨어있나 } from './길들이기.mjs'
@@ -188,7 +188,7 @@ export async function 한판(계정, {
         const 주소 = await 주소받기(글.번호).catch(() => null)
         if (!주소) { 알림(`  ${글.code} 주소를 못 받았다`); continue }
         try {
-          await 쪽.goto(주소, { waitUntil: 'domcontentloaded', timeout: 45000 })
+          await 글열기(쪽, 주소)
           await 쪽.waitForTimeout(4000)
         } catch { 알림(`  ${글.code} 못 열었다`); continue }
         const 칸들 = await 쪽.evaluate(페이지에서댓글줍기, { 스크롤수: 옵션.스크롤, 기다림: 700 })
@@ -269,7 +269,7 @@ export async function 초안올리기(계정, {
     머문뒤: async (쪽) => {
       for (const c of 초안.답글) {
         try {
-          await 쪽.goto(c.내글주소, { waitUntil: 'domcontentloaded', timeout: 45000 })
+          await 글열기(쪽, c.내글주소)
           await 쪽.waitForTimeout(사람처럼(옵션.머물초, 굴림) * 1000)
           const 안에 = 쪽.locator(`[data-pressable-container]:has(a[href*="/post/${c.code}"])`).first()
           하트결과들[c.code] = await 하트누르기(쪽, { 안에 })

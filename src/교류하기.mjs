@@ -17,7 +17,7 @@ import { 하트댓글옵션 } from './활동설정.mjs'
 //
 // ⚠️ **팔로우는 여기서 하지 않는다.** 사람이 직접 한다 (§7-8).
 
-import { 홈에서걷기 } from './홈수집.mjs'
+import { 홈에서걷기, 글열기 } from './홈수집.mjs'
 import { 브라우저로답글달기 } from './브라우저답글.mjs'
 import { 언어판별, 사람처럼, 사람깨어있나 } from './길들이기.mjs'
 import { readFile, writeFile, unlink, appendFile, readdir, rename, mkdir } from 'node:fs/promises'
@@ -260,8 +260,7 @@ export async function 한판(계정, {
       for (const p of 고른것) {
         const 초 = 사람처럼(옵션.머물초, 굴림)
         try {
-          await 쪽.goto(`https://www.threads.com/@${p.작성자}/post/${p.code}`,
-            { waitUntil: 'domcontentloaded', timeout: 45000 })
+          await 글열기(쪽, `https://www.threads.com/@${p.작성자}/post/${p.code}`)
           await 쪽.waitForTimeout(초 * 1000) // 글을 읽는 시간. 열자마자 누르면 사람이 아니다
           const 결과 = 보기만 ? '보기만' : await 하트누르기(쪽)
           알림(`  하트 @${p.작성자} — ${결과}`)
@@ -327,7 +326,7 @@ export async function 초안올리기(계정, {
       머문뒤: async (쪽) => {
         for (const p of 초안.하트) {
           try {
-            await 쪽.goto(`https://www.threads.com/@${p.작성자}/post/${p.code}`, { waitUntil: 'domcontentloaded', timeout: 45000 })
+            await 글열기(쪽, `https://www.threads.com/@${p.작성자}/post/${p.code}`)
             await 쪽.waitForTimeout(사람처럼(옵션.머물초, 굴림) * 1000)
             const 결과 = await 하트누르기(쪽)
             알림(`  하트 @${p.작성자} — ${결과}`)

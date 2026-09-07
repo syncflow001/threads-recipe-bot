@@ -10,7 +10,7 @@ import { 알리기 } from './알림.mjs'
 
 const 기본실행 = promisify(execFile)
 
-export const 저장소 = 'syncflow001/threads-recipe-bot'
+export const 저장소 = 'kimleader/threads-recipe-bot'
 export const 기록파일 = 'logs/업데이트기록.json'
 export const 업데이트라벨 = 'com.threads.update'
 

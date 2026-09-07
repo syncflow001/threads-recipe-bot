@@ -14,7 +14,7 @@ import { readFile, writeFile, mkdir } from 'node:fs/promises'
 import { 안전쓰기 } from './장부쓰기.mjs'
 import { 길들이기옵션 } from './활동설정.mjs'
 import { dirname, join } from 'node:path'
-import { 홈에서걷기 } from './홈수집.mjs'
+import { 홈에서걷기, 글열기 } from './홈수집.mjs'
 import { 돌려쓰기, 계정길 } from './계정.mjs'
 
 export const 설정 = {
@@ -127,8 +127,7 @@ export async function 한판(계정, {
         const 초 = 사람처럼(옵션.머물초, 굴림)
         알림(`@${p.작성자} 의 글을 열어 ${초}초 머문다`)
         try {
-          await 쪽.goto(`https://www.threads.com/@${p.작성자}/post/${p.code}`,
-            { waitUntil: 'domcontentloaded', timeout: 45000 })
+          await 글열기(쪽, `https://www.threads.com/@${p.작성자}/post/${p.code}`)
           // 머문 시간이 신호다. 열고 바로 닫으면 본 것으로 안 쳐 준다.
           // 사람처럼 조금 내려도 본다 — 글 하나를 읽으면 화면이 움직인다
           await 쪽.waitForTimeout(초 * 500)
@@ -151,8 +150,7 @@ export async function 한판(계정, {
           for (const p of 볼것) {
             const 초 = 사람처럼(옵션.머물초, 굴림)
             try {
-              await 쪽.goto(`https://www.threads.com/@${p.작성자}/post/${p.code}`,
-                { waitUntil: 'domcontentloaded', timeout: 45000 })
+              await 글열기(쪽, `https://www.threads.com/@${p.작성자}/post/${p.code}`)
               await 쪽.waitForTimeout(초 * 500)
               await 쪽.evaluate(() => { document.documentElement.scrollTop += 400 })
               await 쪽.waitForTimeout(초 * 500)

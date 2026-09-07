@@ -54,6 +54,25 @@ async function 페이지에서걷기({ 스크롤수, 기다림 }) {
   return [...모음].map(([code, v]) => ({ code, 작성자: v.작성자, 글자: v.글자 }))
 }
 
+// ⚠️ **글 하나를 열 때는 반드시 이것으로 연다** (2026-09-06).
+//
+// 주소창에 직접 친 것처럼 열면(그냥 `goto`) 스레드가 **어떤 계정에는 검색엔진용 껍데기**를 준다 —
+// 화면 이름이 `BarcelonaPostColumnRoute`(진짜 글 화면)가 아니라 `BarcelonaFeedColumnRoute` 로 오고,
+// **답글 칸도 답글도 없다.** 그러면 답글 달기가 「쿠키가 죽었다」로 끝난다 (칸을 못 찾으니까).
+//
+// 실측 — `sample_yori` 로 같은 글을 크롬으로 열어 봤다.
+//     그냥 goto        → 답글칸 0개 · BarcelonaFeedColumnRoute
+//     referer 를 홈으로 → 답글칸 1개 · BarcelonaPostColumnRoute
+//
+// **홈에서 눌러 들어간 모양**이다. 실제로 우리가 하는 일이 그것이다 —
+// 홈에서 걷은 글로 들어간다. 문서로 받는 길에도 같은 못을 박았다 (`src/threads.mjs` 문서헤더).
+// 이것 때문에 두 계정이 사흘 동안 본문만 올리고 레시피 답글을 못 달았다
+// ([[크롬에서-되는데-우리-요청만-안-되면-요청-모양을-의심한다]])
+export const 홈주소 = 'https://www.threads.com/'
+export const 글열기 = (쪽, 주소, opts = {}) => 쪽.goto(주소, {
+  waitUntil: 'domcontentloaded', timeout: 45000, referer: 홈주소, ...opts,
+})
+
 export async function 홈에서걷기({
   쿠키,
   계정 = '?',
@@ -91,7 +110,7 @@ export async function 홈에서걷기({
     const 판 = await 브라우저.newContext({ viewport: { width: 1280, height: 900 }, locale: 'ko-KR' })
     await 판.addCookies(쿠키풀기(쿠키))
     const 쪽 = await 판.newPage()
-    await 쪽.goto('https://www.threads.com/', { waitUntil: 'domcontentloaded', timeout: 45000 })
+    await 쪽.goto(홈주소, { waitUntil: 'domcontentloaded', timeout: 45000 })
     await 쪽.waitForTimeout(3500)
 
     // 쿠키가 죽어도 로그인 화면이 안 뜬다. `5xx Server Error` 한 줄만 온다 (실측).

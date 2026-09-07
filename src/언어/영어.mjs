@@ -61,6 +61,10 @@ export default {
   // ⚠️ `#affiliate` 나 `#partner` 만 쓰면 안 된다. FTC 가 「뜻이 불분명하다」고 본 표현이다
   광고표기: '#ad',
 
+  // 터진 글에만 뒤늦게 다는 링크 답글의 첫 줄 (src/늦은링크.mjs). 한국어팩과 같은 자리다.
+  // ⚠️ 영어 계정은 아직 제휴가 「없음」이라 안 쓰인다 — 자리만 맞춰 둔다 (CLAUDE.md §3 언어팩 기준)
+  늦은링크말: (재료) => `So many of you asked where I got the ${재료} 👇`,
+
   쓰기지시: [
     'Write in English. Do not mix in Korean or Japanese.',
     // 영어권 계량은 분수와 약어를 쓴다 (1/2 cup, 2 tbsp). 원문 표기를 못 바꾸게 못 박는다 —

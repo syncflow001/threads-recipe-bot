@@ -5,6 +5,7 @@ import { 헬스체크 } from '@/components/쪽/monitor/헬스체크'
 import { 조회수알리미 } from '@/components/쪽/monitor/조회수알리미'
 import { 점검 } from '@/components/쪽/monitor/점검'
 import { 섀도우밴 } from '@/components/쪽/monitor/섀도우밴'
+import { 늦은링크알림 } from '@/components/쪽/monitor/늦은링크알림'
 
 export type 감시자료 = {
   헬스체크: { 켜짐: boolean; 간격시간: number; 마지막: { 때: string; 계정수: number; 탈: string[] } | null }
@@ -29,6 +30,7 @@ export default function 모니터링() {
         <조회수알리미 자료={감시.data} 에러={감시.error} 다시읽기={() => 감시.refetch()} />
         <점검 />
         <섀도우밴 />
+        <늦은링크알림 />
       </div>
     </>
   )

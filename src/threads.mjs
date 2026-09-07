@@ -3,11 +3,29 @@ import './그물.mjs'   // IPv6 헛디딤 막기 (부수 효과) — 왜인지�
 
 // 스레드는 요청이 "브라우저의 페이지 이동" 처럼 보일 때만 데이터를 실어 보낸다.
 // 이 헤더가 없으면 껍데기만 오고 게시물이 통째로 빠진다. 실측으로 확인했다 (설계서 §2-1).
+// ⚠️ **`Sec-Fetch-Site` 와 `Referer` 가 판을 가른다** (2026-09-06 실측).
+//
+// 예전에는 `Sec-Fetch-Site: none` 이었다 — 주소창에 직접 친 것처럼 보이는 요청이다.
+// 그러면 스레드가 **어떤 계정에는 글 상세 대신 검색엔진용 껍데기를 준다.**
+// 문서 안 화면 이름이 `BarcelonaPostColumnRoute`(진짜 글 화면)가 아니라
+// `BarcelonaFeedColumnRoute` 로 오고, **조회수도 레시피 답글도 통째로 빠진다.**
+//
+// 사용자가 짚어 줬다 — 「크롬에서 홈의 글을 누르면 답글이 다 보이는데?」. 그 말이 맞았다.
+// 같은 쿠키로 헤더만 바꿔 재 봤다 (`sample_yori`, 같은 글).
+//     Sec-Fetch-Site: none                    → 632KB · BarcelonaFeedColumnRoute · 조회수 0 · caption 1
+//     same-origin + Referer(홈)                → 853KB · BarcelonaPostColumnRoute · 조회수 2 · caption 4
+//   (브라우저 UA 만 바꾸는 것으로는 안 된다. 가르는 것은 이 둘이다)
+//
+// **홈에서 글을 눌러 들어간 것과 같은 모양**이다. 실제로 우리가 하는 일이 그것이다 —
+// 홈에서 걷은 글 번호를 들고 그 글로 들어간다. 거짓으로 꾸미는 것이 아니라 제 모양을 찾은 것이다.
+// 이 두 줄이 없어서 `sample_yori` 는 나흘, `sample_minimi` 는 며칠을 제 눈으로 못 읽었다
+// ([[크롬에서-되는데-우리-요청만-안-되면-요청-모양을-의심한다]])
 const 문서헤더 = {
   Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
   'Sec-Fetch-Dest': 'document',
   'Sec-Fetch-Mode': 'navigate',
-  'Sec-Fetch-Site': 'none',
+  'Sec-Fetch-Site': 'same-origin',
+  Referer: `${'https://www.threads.com'}/`,
   'Upgrade-Insecure-Requests': '1',
   'Accept-Language': 'ko-KR,ko;q=0.9',
 }

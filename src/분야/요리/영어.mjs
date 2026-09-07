@@ -124,6 +124,10 @@ const 부가글지시 = [
   //    But "posted separately" has been false since 2026-09-02. The reply goes out as one
   '[Paragraphs] Put a blank line between the ingredients and the steps.',
   '**Both go inside one single reply.** Do not split them across replies.',
+]
+
+// 「제휴 링크 넣기」를 켠 판에만 붙는다 — 링크가 갈 자리를 만드는 지시다
+const 감추기지시 = [
   // ⚠️ 2026-09-02 — 한국(64%)·일본(26편 전부)에서 확인된 장치다. **영어권은 아직 안 재 봤다.**
   //    영어 계정 셋은 제휴가 「없음」이라 링크가 안 붙어 지금은 아무것도 안 나간다.
   //    제휴를 붙이기 전에 영어권 요리 계정을 걷어 이 수법을 쓰는지 실측해야 한다 (CHECKLIST)
@@ -132,6 +136,14 @@ const 부가글지시 = [
   '**Every other ingredient keeps its real name.** You hide exactly one.',
   '**Call it "this" in the steps too.** Never write its real name anywhere.',
   'Keep the amount there as well (e.g. "pour in this 200ml") so people can still cook it.',
+]
+
+// 「제휴 링크 넣기」를 끈 계정에 붙는다. 감추라는 말을 빼는 것만으로는 모자라다 —
+// 출력지시가 blind(한줄소개)를 시키고 있어 LLM 이 그 결을 따라 이름을 흐린다
+const 공개지시 = [
+  '[Show everything] Hide nothing. **Write every ingredient, the 핵심재료 included, by its real name.**',
+  'Use the real name in the steps too — do not replace it with "this" or any other pointing word.',
+  'No link goes on this post, so there is nothing to hide. People must be able to cook from this post alone.',
 ]
 
 const 규칙 = ['- Do not invent. Never add an ingredient or amount that is not in the source; if unsure, leave it out.']
@@ -178,8 +190,9 @@ const 말투서식 = {
   // ⚠️ 2026-09-02 저녁 — 「본문 이모지」를 여기서 뺐다. 사용자가 정했다 —
   //    「문장 구조는 팩이, **말투·이모티콘·무엇을 쓸지는 계정**이 정한다」.
   //    이모지 취향은 계정마다 다르다 (하트 하나 / 한두 개 / 두세 개). persona.json 이 갖는다
-  '레시피 길이': '**17 lines and 340 characters or fewer**, ingredients and steps together. If it runs long, cut the tips first',
-  '레시피 규칙': 'Ingredients, amounts, and the cooking method that matters stay as the source wrote them. Do not change or add anything — only tidy it up so it reads well. Leave blank whatever the source does not say.',
+  // ⚠️ 2026-09-07 — 340 → 480. 링크가 발행 때 안 붙으니 레시피가 곧 답글이다 (한국어팩 주석 참고)
+  '레시피 길이': '**20 lines and 480 characters or fewer**, ingredients and steps together. If it runs long, cut the tips first',
+  '레시피 규칙': 'Ingredients, amounts, and the cooking method that matters stay as the source wrote them. Do not change them — only tidy it up so it reads well. Leave blank whatever the source does not say. **Keep the tips, warnings, and swaps the source gives** — there is room now. Where a beginner would hesitate (heat level, why this order, how far to cook), add one short helpful line, like a friend standing next to them. Never invent times, temperatures, or amounts the source does not give.',
   '레시피 형식': 'First line is "emoji Dish Name". Then "🛒 Ingredients" with one ingredient per line. Then "🍳 Instructions" with steps numbered 1️⃣2️⃣3️⃣. **Write it all as one block — do not split ingredients away from the steps.** It must all fit in a single reply.',
 }
 
@@ -222,6 +235,8 @@ export default {
   지시문,
   출력지시,
   부가글지시,
+  감추기지시,
+  공개지시,
   형식라벨: '형식',
   규칙,
 }

@@ -66,13 +66,21 @@ export async function 빠진권한(토큰 = process.env.THREADS_ACCESS_TOKEN, �
 // 지금은 계정마다 프로세스가 따로라 안 터졌을 뿐이다 (2026-08-30 실측)
 const 내번호캐시 = new Map()
 
-// 토큰이 가리키는 계정 번호와 아이디를 한 번에 묻는다. 요청 하나로 둘 다 얻는다
-async function 토큰주인(토큰, 가져오기 = fetch) {
+// 토큰이 가리키는 계정 번호와 아이디를 한 번에 묻는다. 요청 하나로 둘 다 얻는다.
+// ⚠️ **스레드가 준 까닭도 함께 돌려준다** (2026-09-04). 전에는 삼켜서 「확인 못 했다」로만 보였다 —
+// `sample_noon` 이 세 판을 내리 실패했는데, 손으로 API 를 두드려 보고서야
+// 「Session key is malformed because of invalid user id」를 알았다. 헬스체크가 이 까닭을 싣는다.
+// 벽(`토큰벽`)은 예전처럼 번호·아이디만 본다 — 까닭은 알리는 쪽에서만 쓴다
+export async function 토큰주인(토큰, 가져오기 = fetch) {
   try {
     const j = await 가져오기(`https://graph.threads.net/v1.0/me?fields=id,username&access_token=${토큰}`)
       .then((r) => r.json())
-    return { 번호: j?.id ? String(j.id) : null, 아이디: j?.username ?? null }
-  } catch { return { 번호: null, 아이디: null } } // 못 물어봤으면 넣어 둔 값을 그대로 쓴다
+    return {
+      번호: j?.id ? String(j.id) : null,
+      아이디: j?.username ?? null,
+      까닭: j?.error?.message ?? null,
+    }
+  } catch (e) { return { 번호: null, 아이디: null, 까닭: e?.message ?? null } } // 못 물어봤으면 넣어 둔 값을 그대로 쓴다
 }
 
 export async function 내계정번호(토큰 = process.env.THREADS_ACCESS_TOKEN, 가져오기 = fetch) {
