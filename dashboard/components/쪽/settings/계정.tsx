@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { 카드, 귀띔 } from '@/components/공용/카드'
 import { 알림줄 } from '@/components/공용/알림줄'
+import { 프로필링크 } from '@/components/공용/프로필링크'
 import { use계정, use자료 } from '@/lib/hooks'
 import { 계정수정판, type 계정상태 } from './계정수정판'
 import { 계정삭제판 } from './계정삭제판'
@@ -39,7 +40,7 @@ export function 계정() {
         <dt className="text-muted-foreground">별칭</dt>
         <dd className="font-semibold break-all">{별칭}</dd>
         <dt className="text-muted-foreground">아이디</dt>
-        <dd className="break-all">{data?.아이디 ? '@' + data.아이디 : '(아직 모릅니다 — 토큰을 넣으면 채워집니다)'}</dd>
+        <dd className="break-all">{data?.아이디 ? <프로필링크 아이디={data.아이디} className="text-primary" /> : '(아직 모릅니다 — 토큰을 넣으면 채워집니다)'}</dd>
         <dt className="text-muted-foreground">분야</dt>
         <dd>{정보.분야 ?? '—'}</dd>
         <dt className="text-muted-foreground">언어</dt>

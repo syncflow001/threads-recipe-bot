@@ -7,6 +7,7 @@ import { 알림줄 } from '@/components/공용/알림줄'
 import { 열쇠도움 } from '@/components/공용/열쇠도움'
 import { 발급매뉴얼 } from './발급매뉴얼'
 import { 자동발급 } from './자동발급'
+import { 쿠키자동발급 } from './쿠키자동발급'
 import { use다시그리기, use자료 } from '@/lib/hooks'
 import { 부르기 } from '@/lib/api'
 
@@ -103,6 +104,7 @@ export function 열쇠() {
               onChange={(e) => 넣은것담기((v) => ({ ...v, [k.이름]: e.target.value }))}
             />
             {k.이름 === 'THREADS_ACCESS_TOKEN' && <자동발급 />}
+            {k.이름 === 'THREADS_COOKIE' && <쿠키자동발급 />}
           </div>
         ))}
       </div>

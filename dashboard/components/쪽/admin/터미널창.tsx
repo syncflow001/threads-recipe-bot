@@ -61,6 +61,18 @@ export function 터미널창({ 번호, 닫기 }: { 번호: number; 닫기: () =>
     <div className="flex min-h-[16rem] flex-col overflow-hidden rounded-[10px] border bg-[#1e1e1e]">
       <div className={'flex items-center gap-2 px-2.5 py-1 text-[0.85rem] text-[#ddd] ' + (끝남 ? 'bg-[#4a2b2b]' : 'bg-[#2b2b2b]')}>
         <b className="flex-1 font-semibold">터미널 {번호}</b>
+        {/* ⚠️ 2026-09-08 — Ctrl+C 는 **터미널 안을 먼저 눌러 초점을 줘야** 먹는다 (실측).
+            단추를 눌러 명령을 보낸 사람은 초점이 단추에 있어서, Ctrl+C 를 눌러도 아무 일이 안 났다.
+            그래서 초점과 상관없이 도는 것을 멈추는 단추를 둔다 — 보내는 것은 같은 \x03 이다 */}
+        <button
+          type="button"
+          title="돌고 있는 명령을 멈춥니다 (Ctrl+C 와 같아요)"
+          onClick={() => { 부르기('/term/input', { 번호, 글: '\x03' }).catch(() => {}) }}
+          disabled={끝남}
+          className="rounded border border-[#666] px-1.5 py-0.5 text-[0.78rem] font-semibold text-[#ddd] hover:bg-[#444] disabled:opacity-40"
+        >
+          멈추기
+        </button>
         <button type="button" title="닫기" onClick={닫기} className="px-1 text-base text-[#bbb] hover:text-white">✕</button>
       </div>
       <div ref={몸} className="min-h-0 flex-1 p-1 [&_.xterm]:h-full" />

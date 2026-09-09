@@ -20,6 +20,27 @@ export function 막힌주소인가(곳들) {
   return 곳들.some((v) => v === '0.0.0.0' || v === '::')
 }
 
+const 잠깐 = (ms) => new Promise((r) => setTimeout(r, ms))
+
+// 부팅 직후에는 테일스케일 주소가 아직 이 컴퓨터에 안 붙어 있다 (EADDRNOTAVAIL — 2026-09-07 재부팅 실측).
+// 그때 그냥 죽으면 Next 가 거부를 삼켜 **127.0.0.1 만 열린 반쪽 서버**가 남고, 폰에서는 못 연다.
+// 그래서 「아직 없는 주소」일 때만 기다렸다 다시 묶는다. 다른 오류는 그대로 던진다
+export async function 묶기(handle, 포트, 곳, { 최대시도 = 60, 쉬기 = 5000 } = {}) {
+  for (let 번 = 1; ; 번++) {
+    try {
+      return await new Promise((resolve, reject) => {
+        const 서버 = createServer(handle)
+        서버.once('error', reject)
+        서버.listen(포트, 곳, () => resolve(서버))
+      })
+    } catch (오류) {
+      if (오류?.code !== 'EADDRNOTAVAIL' || 번 >= 최대시도) throw 오류
+      console.log(`  ${곳} 은 아직 없는 주소입니다 (${번}/${최대시도}) — ${쉬기 / 1000}초 뒤 다시 묶습니다`)
+      await 잠깐(쉬기)
+    }
+  }
+}
+
 export async function 켜기({ 포트 = Number(process.env.PORT) || 7788, 곳들 = 묶을곳들(), 뿌리 = process.cwd(), 열기 = process.env.NOOPEN !== '1' } = {}) {
   const require = createRequire(join(뿌리, 'dashboard', 'package.json'))
   const next = require('next')
@@ -27,11 +48,7 @@ export async function 켜기({ 포트 = Number(process.env.PORT) || 7788, 곳들
   await app.prepare()
   const handle = app.getRequestHandler()
 
-  const 서버들 = await Promise.all(곳들.map((곳) => new Promise((resolve, reject) => {
-    const 서버 = createServer(handle)
-    서버.once('error', reject)
-    서버.listen(포트, 곳, () => resolve(서버))
-  })))
+  const 서버들 = await Promise.all(곳들.map((곳) => 묶기(handle, 포트, 곳)))
 
   // 열쇠말은 dashboard/lib/뿌리.ts 의 열쇠말읽기 와 같은 규칙으로 읽기만 한다.
   // 없으면 만들지 않는다 — 첫 요청이 만들게 둔다
@@ -57,5 +74,6 @@ if (import.meta.url === pathToFileURL(process.argv[1]).href) {
     console.error('BIND 를 0.0.0.0 으로 열지 마세요. 같은 와이파이의 아무나 들어옵니다.')
     process.exit(1)
   }
-  await 켜기({ 곳들 })
+  // 끝내 못 묶으면 반쪽으로 살아 있지 말고 죽는다 — launchd(KeepAlive)가 다시 켠다
+  await 켜기({ 곳들 }).catch((오류) => { console.error(오류); process.exit(1) })
 }

@@ -1,20 +1,30 @@
-// 크롬 창을 띄워 그 계정으로 로그인만 하면, 쿠키를 꺼내 열쇠 파일에 넣고 답글까지 읽히는지 재 준다
+// 늘 쓰는 크롬에서 그 계정 쿠키를 찾아 열쇠 파일에 넣고, 답글까지 읽히는지 재 준다
 //
 //   node 도구/쿠키받기.mjs sample_salim
 //
 // 왜 있나. 예전에는 크롬 개발자도구 → Network → `cookie:` 줄 전체를 손으로 복사해
-// 대시보드 「열쇠」 칸에 붙여넣어야 했다. 비개발자에게 아홉 계정을 그렇게 시킬 수 없다.
+// 대시보드 「열쇠」 칸에 붙여넣어야 했다. 비개발자에게 열네 계정을 그렇게 시킬 수 없다.
 // 게다가 손으로 옮기면 값이 잘린다 — 계정 셋의 쿠키가 110자쯤 잘린 채 몇 달을 돌았다 (인계 §7-18).
 //
-// ⚠️ **로그인한 계정이 맞는지 먼저 묻는다.** 남의 쿠키가 이 계정 칸에 들어가면
+// ⚠️ 2026-09-08 — 길이 **둘**이다. 순서가 중요하다.
+//   ① 늘 쓰는 크롬의 계정 칸을 훑어 그 계정 로그인을 찾는다 → 있으면 **창 하나 안 열고** 바로 넣는다.
+//      실측에서 계정 12개가 이미 로그인돼 있었다. 대개 여기서 끝난다.
+//   ② 어디에도 없으면 **이 계정 전용 크롬 창**을 열어 로그인을 받는다.
+//      ⚠️ 게스트 창은 못 쓴다 — 게스트는 쿠키를 메모리에만 둔다 (실측: 게스트 쿠키 DB 는 줄이 0개인데
+//      크롬이 그 파일을 열어 둔 채였다). 디버깅 포트도 없어 메모리도 못 본다. 그래서 우리가 다루는 창을 쓴다.
+//
+// ⚠️ **로그인한 계정이 맞는지 스레드에 묻는다.** 남의 쿠키가 이 계정 칸에 들어가면
 // 그 계정으로 활동이 나간다 — 되돌리기 가장 어려운 침범이다 (CLAUDE.md §3-1).
 // 파일에 쓰는 것은 `열쇠저장()` 하나뿐이고, 그것이 쓰기 **전에** 주인을 한 번 더 묻는다.
 //
 // ⚠️ 쿠키 값은 화면에 한 글자도 안 찍는다.
+import { join } from 'node:path'
 import { 계정목록 } from '../src/계정.mjs'
 import { 쿠키주인 } from '../src/계정벽.mjs'
 import { 열쇠저장 } from '../src/화면엔진.mjs'
 import { 한판, 막혔다표시, 막힘풀기 } from '../src/눈점검.mjs'
+import { 크롬쿠키들, 금고열쇠 } from '../src/크롬쿠키.mjs'
+import { 쿠키문자열 } from '../src/토큰받기.mjs'
 
 const 계정 = (process.argv[2] ?? '').trim()
 if (!계정) {
@@ -28,69 +38,106 @@ if (!계정들.includes(계정)) {
   process.exit(1)
 }
 
-// 스레드가 쓰는 쿠키만 담는다. 인스타그램 쪽 쿠키가 섞이면 줄만 길어지고 쓰이지 않는다
-const 한줄로 = (것들) => 것들
-  .filter((c) => String(c.domain ?? '').includes('threads.com'))
-  .map((c) => `${c.name}=${c.value}`)
-  .join('; ')
-
-const { chromium } = await import('playwright-core')
-console.log(`크롬 창을 엽니다 — 창에서 **@${계정}** 으로 로그인해 주세요.`)
-console.log('로그인이 끝나면 창을 그대로 두세요. 알아서 알아보고 저장합니다.')
-console.log('(그만두려면 이 터미널에서 Ctrl+C 를 누르세요)\n')
-
-const 브라우저 = await chromium.launch({ headless: false, channel: 'chrome' })
-let 얻은쿠키 = null
-let 창닫힘 = false
+let 열쇠
 try {
-  // 쿠키를 하나도 안 넣고 연다. 넣으면 이미 남의 계정으로 로그인된 창이 뜬다
-  const 판 = await 브라우저.newContext({ viewport: { width: 1180, height: 900 }, locale: 'ko-KR' })
-  const 쪽 = await 판.newPage()
-  await 쪽.goto('https://www.threads.com/login', { waitUntil: 'domcontentloaded', timeout: 60000 })
+  열쇠 = await 금고열쇠()
+} catch {
+  console.error('❌ 크롬의 쿠키 금고를 못 열었습니다.')
+  console.error('   맥이 「키체인 접근을 허용할까요?」를 물으면 **허용**을 눌러 주세요. 그런 창이 안 떴다면')
+  console.error('   맥 암호를 한 번 잠갔다 풀고 다시 해 보세요.')
+  process.exit(1)
+}
 
-  const 끝날때 = Date.now() + 10 * 60 * 1000
-  let 알린주인 = null
-  // ⚠️ **창을 닫으면 죽지 않는다** (2026-09-06 사용자 실측). 사람이 창을 닫는 것은
-  //    「그만두겠다」는 뜻이지 고장이 아니다. 그런데 playwright 는 그 자리에서 던져
-  //    `page.waitForTimeout: Target page, context or browser has been closed` 로 끝났다
-  const 닫혔나 = () => 쪽.isClosed() || !브라우저.isConnected()
-  while (Date.now() < 끝날때) {
-    if (닫혔나()) { 창닫힘 = true; break }
-    try { await 쪽.waitForTimeout(3000) } catch { 창닫힘 = true; break }
-    if (닫혔나()) { 창닫힘 = true; break }
-    const 한줄 = 한줄로(await 판.cookies().catch(() => []))
-    // sessionid 가 없으면 아직 로그인 전이다. 물어봐야 헛일이라 스레드를 두드리지 않는다
-    if (!/(^|;\s*)sessionid=/.test(한줄)) continue
+// 같은 쿠키를 두 번 물어보지 않는다. 판마다 프로필 열셋을 다 물으면 스레드를 괜히 두드린다
+const 물어본것 = new Map()
+async function 주인묻기(쿠키) {
+  const 표 = (쿠키.match(/(?:^|;\s*)sessionid=([^;]*)/) ?? [])[1] ?? ''
+  if (물어본것.has(표)) return 물어본것.get(표)
+  const 주인 = await 쿠키주인(쿠키).catch(() => null)
+  // 못 읽은 것은 기억하지 않는다 — 잠깐 네트워크가 흔들린 것일 수 있다
+  if (주인) 물어본것.set(표, 주인)
+  return 주인
+}
 
-    const 주인 = await 쿠키주인(한줄).catch(() => null)
-    if (!주인) continue // 방금 로그인해 아직 화면이 안 잡힌 참일 수 있다. 조금 더 기다린다
-    if (주인 !== 계정) {
-      if (알린주인 !== 주인) {
-        console.log(`⚠️  지금 창은 **@${주인}** 으로 로그인돼 있습니다. @${계정} 이 아닙니다.`)
-        console.log('    창에서 로그아웃하고 다시 로그인해 주세요. 이대로는 저장하지 않습니다.')
-        알린주인 = 주인
-      }
-      continue
-    }
-    얻은쿠키 = 한줄
-    break
+// 본 크롬 프로필을 훑어 이 계정으로 로그인된 칸을 찾는다. 최근에 쓴 프로필부터 본다.
+// 못 찾았을 때 **누가 로그인돼 있는지**도 함께 돌려준다 — 「로그인은 돼 있는데 왜 안 되지」를 풀어 주는 말이다
+async function 찾기() {
+  const 모음 = await 크롬쿠키들({ 열쇠 })
+  const 본것 = []
+  for (const { 프로필, 쿠키 } of 모음) {
+    const 주인 = await 주인묻기(쿠키)
+    if (주인) 본것.push(주인)
+    if (주인 === 계정) return { 찾은것: { 프로필, 쿠키 }, 본것 }
   }
-} finally {
-  await 브라우저.close()
+  return { 찾은것: null, 본것 }
 }
 
-if (!얻은쿠키) {
-  console.error(창닫힘
-    ? `\n창을 닫으셨네요 — 아무것도 바꾸지 않았습니다.`
-    : `\n❌ 10분 동안 @${계정} 로그인을 못 봤습니다 — 아무것도 바꾸지 않았습니다.`)
+console.log(`늘 쓰는 크롬에서 @${계정} 로그인을 찾는 중입니다...`)
+let { 찾은것, 본것 } = await 찾기()
+
+if (!찾은것) {
+  // 여기부터는 **어느 칸에도 그 계정 로그인이 없을 때**다. 무엇이 있는지 먼저 있는 그대로 보여 준다 —
+  // 「로그인은 돼 있는데 왜 안 되지」의 답이 대개 여기 있다 (딴 계정으로 로그인돼 있다)
+  console.log(`\n크롬에 @${계정} 로그인이 없습니다.`)
+  if (본것.length) {
+    console.log('\n   지금 크롬 칸마다 로그인된 계정 —')
+    for (const v of [...new Set(본것)].sort()) console.log(`     @${v}`)
+    console.log(`\n   이 가운데 @${계정} 이 없습니다. 그래서 넣을 것이 없습니다.`)
+  }
+  // ⚠️ 2026-09-08 — **게스트 창에서는 못 가져온다.** 사용자가 게스트 프로필로 대시보드를 열고
+  //    거기서 받으려 했는데, 게스트는 쿠키를 **메모리에만** 둔다 — 실측: 게스트 쿠키 DB 는 줄이 0개고
+  //    크롬이 그 파일을 열어 둔 채로도 안 쓴다. 디버깅 포트도 안 열려 있어 메모리도 못 본다.
+  //    그래서 **게스트와 똑같이 깨끗하되 우리가 읽을 수 있는 창**을 연다 (진짜 크롬이다).
+  //    이 창은 계정마다 따로라 다음에 또 누르면 로그인이 남아 있어 바로 들어간다 — 게스트보다 낫다
+  console.log('\n   ⚠️ 게스트 창에서는 쿠키를 가져올 수 없습니다 — 게스트는 쿠키를 저장하지 않기 때문입니다.')
+  console.log(`   그래서 **이 계정 전용 크롬 창**을 엽니다 (게스트처럼 깨끗한 창입니다).`)
+  console.log(`   그 창에서 **@${계정}** 으로 로그인해 주세요. 로그인만 하면 바로 넣습니다.`)
+  // ⚠️ 대시보드 터미널에서는 **Ctrl+C 가 초점을 안 주면 안 먹는다** (2026-09-08 실측).
+  //    단추로 명령을 보낸 사람은 초점이 단추에 있다. 그래서 「멈추기」 단추를 함께 알려 준다
+  console.log('   (그만두려면 그 창을 닫거나, 터미널 창 오른쪽 위의 「멈추기」 를 누르세요)\n')
+
+  const { chromium } = await import('playwright-core')
+  const 판 = await chromium.launchPersistentContext(join(process.cwd(), '크롬프로필', 계정), {
+    channel: 'chrome', headless: false, viewport: null,
+  })
+  try {
+    const 쪽 = 판.pages()[0] ?? (await 판.newPage())
+    await 쪽.goto('https://www.threads.com/login', { waitUntil: 'domcontentloaded', timeout: 60000 }).catch(() => {})
+    const 끝날때 = Date.now() + 10 * 60 * 1000
+    let 알린주인 = null
+    while (Date.now() < 끝날때 && !찾은것) {
+      // 사람이 창을 닫는 것은 「그만두겠다」는 뜻이지 고장이 아니다
+      if (!판.pages().length) { console.log('   창을 닫으셨네요 — 아무것도 바꾸지 않았습니다.'); break }
+      await new Promise((r) => setTimeout(r, 3000))
+      const 한줄 = 쿠키문자열(await 판.cookies().catch(() => []))
+      if (!/(^|;\s*)sessionid=/.test(한줄)) continue
+      const 주인 = await 쿠키주인(한줄).catch(() => null)
+      if (!주인) continue
+      if (주인 !== 계정) {
+        if (알린주인 !== 주인) {
+          console.log(`   ⚠️ 그 창은 지금 @${주인} 으로 로그인돼 있습니다. @${계정} 이 아닙니다.`)
+          console.log('      로그아웃하고 이 계정으로 다시 로그인해 주세요. 이대로는 저장하지 않습니다.')
+          알린주인 = 주인
+        }
+        continue
+      }
+      찾은것 = { 프로필: '이 계정 전용 창', 쿠키: 한줄 }
+    }
+  } finally {
+    await 판.close().catch(() => {})
+  }
+}
+
+if (!찾은것) {
+  console.error(`\n❌ 10분 동안 @${계정} 로그인을 못 봤습니다 — 아무것도 바꾸지 않았습니다.`)
   console.error('   다시 하시려면.  node 도구/쿠키받기.mjs ' + 계정)
-  process.exit(창닫힘 ? 0 : 1)
+  process.exit(1)
 }
 
-console.log(`\n✅ @${계정} 로그인을 확인했습니다. 열쇠 파일에 넣습니다...`)
+console.log(`\n✅ @${계정} 로그인을 찾았습니다 (크롬 「${찾은것.프로필}」 칸). 열쇠 파일에 넣습니다...`)
 // 여기서 주인을 한 번 더 묻는다 (열쇠저장 안에서). 두 번 묻는 값이 있다 —
-// 창을 닫는 사이에 사람이 계정을 바꿨을 수 있다
-await 열쇠저장(계정, { THREADS_COOKIE: 얻은쿠키 })
+// 찾은 뒤 넣기 전 사이에 사람이 그 프로필에서 로그아웃했을 수 있다
+await 열쇠저장(계정, { THREADS_COOKIE: 찾은것.쿠키 })
 console.log('   넣었습니다.')
 
 // 넣었다고 읽히는 것이 아니다. **실제로 답글을 읽어 본다** ([[검사-초록이어도-단추는-사람이-누른다]]).
@@ -107,11 +154,11 @@ if (!기준글.length) {
   console.log(`✅ ${계정} — 답글 ${내것.글타래본것}/${기준글.length}편을 읽습니다. 이제 레시피를 찾습니다.`)
   if (await 막힘풀기(계정)) console.log('   전에 「막힘」으로 표시해 둔 것을 지웠습니다 — 스레드가 풀어 줬습니다.')
 } else {
-  // ⚠️ **여기까지 왔으면 「쿠키를 다시 넣어 보세요」는 틀린 말이다.** 방금 새로 로그인했다.
+  // ⚠️ **여기까지 왔으면 「쿠키를 다시 넣어 보세요」는 틀린 말이다.** 방금 새 쿠키를 넣었다.
   //    스레드가 이 계정에만 글 상세 화면을 안 내주는 것이고, 새 쿠키로도 그대로였다.
   //    표시를 남겨 헬스체크가 3시간마다 이 일로 부르지 않게 한다
   console.log(`⚠️  ${계정} — ${내것?.말 ?? '아직 못 읽습니다'} (답글 ${내것?.글타래본것 ?? 0}/${기준글.length}편)`)
-  console.log('   **방금 새로 로그인했는데도 그대로입니다.** 쿠키 문제는 아닙니다.')
+  console.log('   **방금 새 쿠키를 넣었는데도 그대로입니다.** 쿠키 문제는 아닙니다.')
   // ⚠️ 여기서 「고칠 수 없다」고 단정하지 않는다. 2026-09-06 에 똑같은 상태를 두고
   //    「계정에 걸렸다」고 단정했는데, 실은 **우리 요청 모양**이 문제였다.
   //    쿠키가 아니면 다음으로 의심할 것은 요청이지 계정이 아니다

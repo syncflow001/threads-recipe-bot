@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { use계정, use자료 } from '@/lib/hooks'
 import { 알림줄 } from '@/components/공용/알림줄'
+import { 프로필링크 } from '@/components/공용/프로필링크'
 import { 계정수정판, type 계정상태 } from '@/components/쪽/settings/계정수정판'
 import { 계정삭제판 } from '@/components/쪽/settings/계정삭제판'
 
@@ -71,7 +72,7 @@ export function 계정카드() {
         <span className={켜짐표(링크켜짐)}>{링크켜짐 ? 'ON' : 'OFF'}</span>
       </div>
       <div className="mt-2 flex items-center gap-1.5 font-mono font-bold break-all">
-        {이름줄}
+        {s?.아이디 ? <프로필링크 아이디={s.아이디} /> : 이름줄}
         {점색 && (
           <span
             className={cn('inline-block size-2 shrink-0 rounded-full', 점색)}
